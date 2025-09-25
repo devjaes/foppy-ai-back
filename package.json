@@ -1,0 +1,46 @@
+{
+	"name": "finance-app",
+	"version": "1.0.0",
+	"scripts": {
+		"dev": "bun run --hot src/index.ts",
+		"build": "bun build src/index.ts --outdir dist --target node --external bun",
+		"migrate": "bun drizzle-kit migrate",
+		"generate": "bun drizzle-kit generate",
+		"db:seed": "bun run src/core/infrastructure/scripts/categories.seed.ts",
+		"db:clean": "bun run src/core/infrastructure/scripts/clean-database.ts",
+		"db:refresh": "bun run db:clean && bun run db:seed"
+	},
+	"dependencies": {
+		"@getbrevo/brevo": "^2.2.0",
+		"@hono/zod-openapi": "^0.18.3",
+		"@scalar/hono-api-reference": "^0.5.162",
+		"@types/json2csv": "^5.0.7",
+		"@types/uuid": "^10.0.0",
+		"cron": "^4.3.0",
+		"date-fns": "^4.1.0",
+		"dotenv": "^16.4.5",
+		"dotenv-expand": "^12.0.1",
+		"drizzle-orm": "^0.38.2",
+		"drizzle-zod": "^0.6.0",
+		"exceljs": "^4.4.0",
+		"hono": "^4.6.12",
+		"hono-pino": "^0.7.0",
+		"i": "^0.3.7",
+		"jose": "^5.9.6",
+		"json2csv": "^6.0.0-alpha.2",
+		"npm": "^11.3.0",
+		"pdf-lib": "^1.17.1",
+		"pdfkit": "^0.17.0",
+		"pg": "^8.13.1",
+		"pino": "^9.5.0",
+		"pino-pretty": "^13.0.0",
+		"stoker": "^1.4.2",
+		"zod": "^3.23.8"
+	},
+	"devDependencies": {
+		"@types/bun": "latest",
+		"@types/pdfkit": "^0.13.9",
+		"@types/pg": "^8.11.10",
+		"drizzle-kit": "^0.30.1"
+	}
+}

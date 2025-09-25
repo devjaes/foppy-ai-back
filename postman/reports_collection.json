@@ -1,0 +1,88 @@
+{
+	"info": {
+		"name": "Reports API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Generate Report",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"type\": \"BUDGET_SUMMARY\",\n  \"format\": \"PDF\",\n  \"filters\": {\n    \"startDate\": \"2024-01-01\",\n    \"endDate\": \"2024-12-31\",\n    \"categoryId\": \"optional-category-id\",\n    \"userId\": \"optional-user-id\"\n  }\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/reports",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"reports"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Report",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/reports/:id",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"reports",
+						":id"
+					],
+					"variable": [
+						{
+							"key": "id",
+							"value": "report-id-here"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Delete Report",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/reports/:id",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"reports",
+						":id"
+					],
+					"variable": [
+						{
+							"key": "id",
+							"value": "report-id-here"
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:3000"
+		}
+	]
+}

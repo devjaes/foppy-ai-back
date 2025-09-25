@@ -1,0 +1,1 @@
+ALTER TABLE "goal_contribution_schedule" ALTER COLUMN "scheduled_date" SET DATA TYPE timestamp;
