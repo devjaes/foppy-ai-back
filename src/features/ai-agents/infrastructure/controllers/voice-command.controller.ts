@@ -53,8 +53,8 @@ app.post("/voice-command", async (c) => {
     }
 
     const user = payload as { id: number; email: string };
-    const body = await c.req.formData();
-    const audioFile = body.get("audio") as File;
+    const body = await c.req?.formData();
+    const audioFile = body?.get("audio") as File;
 
     if (!audioFile) {
       return c.json({
