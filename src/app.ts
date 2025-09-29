@@ -38,6 +38,7 @@ import { PgGoalContributionRepository } from "./features/goals/infrastucture/ada
 import { ExcelService } from "./features/reports/infrastructure/services/excel.service";
 import { CSVService } from "./features/reports/infrastructure/services/csv.service";
 import reports from "./features/reports/infrastructure/controllers/report.controller";
+import aiAgents from "./features/ai-agents/infrastructure/controllers/voice-command.controller";
 
 const app = createApp();
 
@@ -109,6 +110,7 @@ const routes = [
   notifications,
   email,
   reports,
+  aiAgents,
   notificationSocket,
 ] as const;
 
