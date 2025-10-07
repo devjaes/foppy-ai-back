@@ -52,35 +52,51 @@ app.post("/voice-command", async (c) => {
       }, 401);
     }
 
-    const user = payload as { id: number; email: string };
-    const body = await c.req?.formData();
-    const audioFile = body?.get("audio") as File;
+ return c.json({
+    "success": true,
+    "intent": "CREATE_TRANSACTION", 
+    "extractedData": {
+        "user_id": 1,
+        "amount": 25,
+        "type": "EXPENSE",
+        "description": "desayuno",
+        "category_id": null,
+        "payment_method_id": null,
+        "date": "2025-10-07T13:18:32.623Z"
+    },
+    "confidence": 0.95,
+    "message": "He identificado una transacción: Gasto de $25 en desayuno"
+});
 
-    if (!audioFile) {
-      return c.json({
-        success: false,
-        message: "No se recibió archivo de audio"
-      }, 400);
-    }
+    // const user = payload as { id: number; email: string };
+    // const body = await c.req?.formData();
+    // const audioFile = body?.get("audio") as File;
 
-    const audioBlob = new Blob([await audioFile.arrayBuffer()], { 
-      type: audioFile.type || 'audio/wav' 
-    });
+    // if (!audioFile) {
+    //   return c.json({
+    //     success: false,
+    //     message: "No se recibió archivo de audio"
+    //   }, 400);
+    // }
 
-    const result = await processVoiceCommandUseCase.execute({
-      audioBlob,
-      userId: user.id
-    });
+    // const audioBlob = new Blob([await audioFile.arrayBuffer()], { 
+    //   type: audioFile.type || 'audio/wav' 
+    // });
 
-    return c.json({
-      success: result.success,
-      intent: result.intent,
-      extractedData: result.extractedData,
-      confidence: result.confidence,
-      message: result.message,
-      validationErrors: result.validationErrors,
-      suggestedCorrections: result.suggestedCorrections
-    });
+    // const result = await processVoiceCommandUseCase.execute({
+    //   audioBlob,
+    //   userId: user.id
+    // });
+
+    // return c.json({
+    //   success: result.success,
+    //   intent: result.intent,
+    //   extractedData: result.extractedData,
+    //   confidence: result.confidence,
+    //   message: result.message,
+    //   validationErrors: result.validationErrors,
+    //   suggestedCorrections: result.suggestedCorrections
+    // });
 
   } catch (error) {
     console.error("Error processing voice command:", error);
