@@ -13,6 +13,7 @@
 	"dependencies": {
 		"@getbrevo/brevo": "^2.2.0",
 		"@hono/zod-openapi": "^0.18.3",
+		"@langchain/core": "^0.3.77",
 		"@scalar/hono-api-reference": "^0.5.162",
 		"@types/json2csv": "^5.0.7",
 		"@types/uuid": "^10.0.0",
@@ -28,6 +29,7 @@
 		"i": "^0.3.7",
 		"jose": "^5.9.6",
 		"json2csv": "^6.0.0-alpha.2",
+		"langchain": "^0.3.34",
 		"npm": "^11.3.0",
 		"pdf-lib": "^1.17.1",
 		"pdfkit": "^0.17.0",
