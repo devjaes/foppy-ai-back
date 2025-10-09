@@ -52,20 +52,21 @@ app.post("/voice-command", async (c) => {
       }, 401);
     }
 
- return c.json({
+  return c.json({
     "success": true,
-    "intent": "CREATE_TRANSACTION", 
+    "intent": "CREATE_GOAL",
     "extractedData": {
         "user_id": 1,
-        "amount": 25,
-        "type": "EXPENSE",
-        "description": "desayuno",
+        "name": "meta de ahorro para comida",
+        "target_amount": 600,
+        "current_amount": 0,
+        "end_date": "2026-10-09T21:58:33.460Z",
         "category_id": null,
-        "payment_method_id": null,
-        "date": "2025-10-07T13:18:32.623Z"
+        "contribution_frequency": null,
+        "contribution_amount": null
     },
     "confidence": 0.95,
-    "message": "He identificado una transacción: Gasto de $25 en desayuno"
+    "message": "He identificado una meta de ahorro: \"meta de ahorro para comida\" con objetivo de $600"
 });
 
     // const user = payload as { id: number; email: string };
