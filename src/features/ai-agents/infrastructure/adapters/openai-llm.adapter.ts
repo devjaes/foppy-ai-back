@@ -36,7 +36,7 @@ Responde SOLO con un JSON en este formato:
   }
 
   async extractData(transcription: string, intent: string): Promise<{ data: Record<string, any>; confidence: number }> {
-    let prompt = '';
+    let prompt = 'category_id=1,comida;2,viajes;3,education;4,otro\n';
 
     switch (intent) {
       case 'CREATE_TRANSACTION':
@@ -49,7 +49,7 @@ Responde SOLO con un JSON con estos campos:
   "amount": número,
   "type": "INCOME" o "EXPENSE",
   "description": "descripción",
-  "category": "nombre de categoría si se menciona",
+  "category_id": "nombre de categoría si se menciona",
   "payment_method": "método de pago si se menciona",
   "confidence": 0.0-1.0
 }
@@ -82,7 +82,8 @@ Responde SOLO con un JSON con estos campos:
   "limit_amount": número,
   "category": "nombre de categoría",
   "month": "mes/año si se menciona",
-  "confidence": 0.0-1.0
+  "confidence": 0.0-1.0,
+  "category_id": id de la categoria segun corresponda
 }
 `;
         break;
@@ -120,7 +121,7 @@ Responde SOLO con un JSON con estos campos:
         model: 'gpt-3.5-turbo-instruct',
         prompt: fullPrompt,
         temperature: 0.3,
-        max_tokens: 500
+        max_tokens: 400
       }),
     });
 
