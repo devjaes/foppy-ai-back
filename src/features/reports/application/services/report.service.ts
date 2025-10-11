@@ -8,6 +8,11 @@ import {
   ContributionReport,
   SavingsComparisonReport,
   SavingsSummaryReport,
+  BudgetReport,
+  ExpenseReport,
+  IncomeReport,
+  DebtReport,
+  ComprehensiveReport,
 } from "../../domain/entities/report.entity";
 import { ReportService } from "../../domain/services/report.service";
 import { ReportRepository } from "../../domain/repositories/report.repository";
@@ -95,6 +100,21 @@ export class ReportServiceImpl implements ReportService {
         break;
       case ReportType.SAVINGS_SUMMARY:
         data = await this.generateSavingsSummaryReport(filters);
+        break;
+      case ReportType.BUDGET:
+        data = await this.generateBudgetReport(filters);
+        break;
+      case ReportType.EXPENSE:
+        data = await this.generateExpenseReport(filters);
+        break;
+      case ReportType.INCOME:
+        data = await this.generateIncomeReport(filters);
+        break;
+      case ReportType.DEBT:
+        data = await this.generateDebtReport(filters);
+        break;
+      case ReportType.COMPREHENSIVE:
+        data = await this.generateComprehensiveReport(filters);
         break;
       default:
         throw new Error(`Unsupported report type: ${type}`);
@@ -464,6 +484,515 @@ export class ReportServiceImpl implements ReportService {
       (endDate.getMonth() - startDate.getMonth()) +
       1
     );
+  }
+
+  private async generateBudgetReport(
+    filters: ReportFilters
+  ): Promise<BudgetReport> {
+    if (!filters.userId) {
+      throw new Error("User ID is required for budget report");
+    }
+
+    // TODO: Implement proper budget repository method
+    const budgets: any[] = []; // await this.budgetRepository.findByFilters(filters);
+    const now = new Date();
+
+    if (budgets.length === 0) {
+      return {
+        totalBudgets: 0,
+        totalBudgetAmount: 0,
+        totalSpent: 0,
+        averageUtilization: 0,
+        overBudgetCount: 0,
+        budgets: [],
+        categoryBreakdown: [],
+      };
+    }
+
+    let totalBudgetAmount = 0;
+    let totalSpent = 0;
+    let overBudgetCount = 0;
+
+    const budgetData = budgets.map((budget: any) => {
+      const utilization = (budget.current_amount / budget.limit_amount) * 100;
+      totalBudgetAmount += budget.limit_amount;
+      totalSpent += budget.current_amount;
+
+      if (budget.current_amount > budget.limit_amount) {
+        overBudgetCount++;
+      }
+
+      return {
+        id: budget.id?.toString() || "",
+        categoryName: budget.category?.name || "Sin categoría",
+        limitAmount: budget.limit_amount,
+        currentAmount: budget.current_amount,
+        utilization: Math.round(utilization * 100) / 100,
+        status:
+          budget.current_amount > budget.limit_amount
+            ? "over"
+            : budget.current_amount === budget.limit_amount
+            ? "at_limit"
+            : "under",
+        month: budget.month,
+      };
+    });
+
+    // Agrupar por categoría
+    const categoryMap = new Map();
+    budgets.forEach((budget: any) => {
+      const categoryId = budget.category?.id?.toString() || "unknown";
+      const categoryName = budget.category?.name || "Sin categoría";
+
+      if (!categoryMap.has(categoryId)) {
+        categoryMap.set(categoryId, {
+          categoryId,
+          categoryName,
+          totalBudget: 0,
+          totalSpent: 0,
+          budgetCount: 0,
+        });
+      }
+
+      const category = categoryMap.get(categoryId);
+      category.totalBudget += budget.limit_amount;
+      category.totalSpent += budget.current_amount;
+      category.budgetCount += 1;
+    });
+
+    const categoryBreakdown = Array.from(categoryMap.values()).map(
+      (category) => ({
+        ...category,
+        utilization:
+          category.totalBudget > 0
+            ? (category.totalSpent / category.totalBudget) * 100
+            : 0,
+      })
+    );
+
+    return {
+      totalBudgets: budgets.length,
+      totalBudgetAmount,
+      totalSpent,
+      averageUtilization:
+        totalBudgetAmount > 0 ? (totalSpent / totalBudgetAmount) * 100 : 0,
+      overBudgetCount,
+      budgets: budgetData,
+      categoryBreakdown,
+    };
+  }
+
+  private async generateExpenseReport(
+    filters: ReportFilters
+  ): Promise<ExpenseReport> {
+    if (!filters.userId) {
+      throw new Error("User ID is required for expense report");
+    }
+
+    // TODO: Implement proper transaction repository method with type filter
+    const transactions: any[] = []; // await this.transactionRepository.findByFilters(expenseFilters);
+
+    if (transactions.length === 0) {
+      return {
+        totalExpenses: 0,
+        totalTransactions: 0,
+        averageExpense: 0,
+        topCategories: [],
+        monthlyTrends: [],
+        transactions: [],
+      };
+    }
+
+    const totalExpenses = transactions.reduce(
+      (sum: number, t: any) => sum + t.amount,
+      0
+    );
+    const averageExpense = totalExpenses / transactions.length;
+
+    // Agrupar por categoría
+    const categoryMap = new Map();
+    transactions.forEach((transaction: any) => {
+      const categoryId = transaction.category?.id?.toString() || "unknown";
+      const categoryName = transaction.category?.name || "Sin categoría";
+
+      if (!categoryMap.has(categoryId)) {
+        categoryMap.set(categoryId, {
+          categoryId,
+          categoryName,
+          totalAmount: 0,
+          transactionCount: 0,
+        });
+      }
+
+      const category = categoryMap.get(categoryId);
+      category.totalAmount += transaction.amount;
+      category.transactionCount += 1;
+    });
+
+    const topCategories = Array.from(categoryMap.values())
+      .map((category) => ({
+        ...category,
+        percentage: (category.totalAmount / totalExpenses) * 100,
+      }))
+      .sort((a, b) => b.totalAmount - a.totalAmount)
+      .slice(0, 10);
+
+    // Agrupar por mes
+    const monthlyMap = new Map();
+    transactions.forEach((transaction: any) => {
+      const date = new Date(transaction.date);
+      const monthKey = `${date.getFullYear()}-${String(
+        date.getMonth() + 1
+      ).padStart(2, "0")}`;
+
+      if (!monthlyMap.has(monthKey)) {
+        monthlyMap.set(monthKey, {
+          month: monthKey,
+          totalAmount: 0,
+          transactionCount: 0,
+        });
+      }
+
+      const month = monthlyMap.get(monthKey);
+      month.totalAmount += transaction.amount;
+      month.transactionCount += 1;
+    });
+
+    const monthlyTrends = Array.from(monthlyMap.values()).sort((a, b) =>
+      a.month.localeCompare(b.month)
+    );
+
+    const transactionData = transactions
+      .slice(0, 100)
+      .map((transaction: any) => ({
+        id: transaction.id?.toString() || "",
+        amount: transaction.amount,
+        description: transaction.description || "Sin descripción",
+        categoryName: transaction.category?.name || "Sin categoría",
+        date: new Date(transaction.date),
+        paymentMethodName: transaction.payment_method?.name || "Sin método",
+      }));
+
+    return {
+      totalExpenses,
+      totalTransactions: transactions.length,
+      averageExpense: Math.round(averageExpense * 100) / 100,
+      topCategories,
+      monthlyTrends,
+      transactions: transactionData,
+    };
+  }
+
+  private async generateIncomeReport(
+    filters: ReportFilters
+  ): Promise<IncomeReport> {
+    if (!filters.userId) {
+      throw new Error("User ID is required for income report");
+    }
+
+    // TODO: Implement proper transaction repository method with type filter
+    const transactions: any[] = []; // await this.transactionRepository.findByFilters(incomeFilters);
+
+    if (transactions.length === 0) {
+      return {
+        totalIncome: 0,
+        totalTransactions: 0,
+        averageIncome: 0,
+        topCategories: [],
+        monthlyTrends: [],
+        transactions: [],
+      };
+    }
+
+    const totalIncome = transactions.reduce(
+      (sum: number, t: any) => sum + t.amount,
+      0
+    );
+    const averageIncome = totalIncome / transactions.length;
+
+    // Agrupar por categoría
+    const categoryMap = new Map();
+    transactions.forEach((transaction: any) => {
+      const categoryId = transaction.category?.id?.toString() || "unknown";
+      const categoryName = transaction.category?.name || "Sin categoría";
+
+      if (!categoryMap.has(categoryId)) {
+        categoryMap.set(categoryId, {
+          categoryId,
+          categoryName,
+          totalAmount: 0,
+          transactionCount: 0,
+        });
+      }
+
+      const category = categoryMap.get(categoryId);
+      category.totalAmount += transaction.amount;
+      category.transactionCount += 1;
+    });
+
+    const topCategories = Array.from(categoryMap.values())
+      .map((category) => ({
+        ...category,
+        percentage: (category.totalAmount / totalIncome) * 100,
+      }))
+      .sort((a, b) => b.totalAmount - a.totalAmount)
+      .slice(0, 10);
+
+    // Agrupar por mes
+    const monthlyMap = new Map();
+    transactions.forEach((transaction: any) => {
+      const date = new Date(transaction.date);
+      const monthKey = `${date.getFullYear()}-${String(
+        date.getMonth() + 1
+      ).padStart(2, "0")}`;
+
+      if (!monthlyMap.has(monthKey)) {
+        monthlyMap.set(monthKey, {
+          month: monthKey,
+          totalAmount: 0,
+          transactionCount: 0,
+        });
+      }
+
+      const month = monthlyMap.get(monthKey);
+      month.totalAmount += transaction.amount;
+      month.transactionCount += 1;
+    });
+
+    const monthlyTrends = Array.from(monthlyMap.values()).sort((a, b) =>
+      a.month.localeCompare(b.month)
+    );
+
+    const transactionData = transactions
+      .slice(0, 100)
+      .map((transaction: any) => ({
+        id: transaction.id?.toString() || "",
+        amount: transaction.amount,
+        description: transaction.description || "Sin descripción",
+        categoryName: transaction.category?.name || "Sin categoría",
+        date: new Date(transaction.date),
+        paymentMethodName: transaction.payment_method?.name || "Sin método",
+      }));
+
+    return {
+      totalIncome,
+      totalTransactions: transactions.length,
+      averageIncome: Math.round(averageIncome * 100) / 100,
+      topCategories,
+      monthlyTrends,
+      transactions: transactionData,
+    };
+  }
+
+  private async generateDebtReport(
+    filters: ReportFilters
+  ): Promise<DebtReport> {
+    if (!filters.userId) {
+      throw new Error("User ID is required for debt report");
+    }
+
+    // Necesitamos acceso al repositorio de deudas
+    // Por ahora, simularemos la estructura
+    const debts: any[] = []; // await this.debtRepository.findByFilters(filters);
+
+    if (debts.length === 0) {
+      return {
+        totalDebts: 0,
+        totalOriginalAmount: 0,
+        totalPendingAmount: 0,
+        totalPaidAmount: 0,
+        averageInterestRate: 0,
+        overdueCount: 0,
+        debts: [],
+        paymentTrends: [],
+      };
+    }
+
+    const now = new Date();
+    let totalOriginalAmount = 0;
+    let totalPendingAmount = 0;
+    let totalPaidAmount = 0;
+    let totalInterestRate = 0;
+    let overdueCount = 0;
+
+    const debtData = debts.map((debt: any) => {
+      const paidAmount = debt.original_amount - debt.pending_amount;
+      const isOverdue = debt.due_date < now && debt.pending_amount > 0;
+
+      totalOriginalAmount += debt.original_amount;
+      totalPendingAmount += debt.pending_amount;
+      totalPaidAmount += paidAmount;
+      totalInterestRate += debt.interest_rate || 0;
+
+      if (isOverdue) {
+        overdueCount++;
+      }
+
+      return {
+        id: debt.id?.toString() || "",
+        description: debt.description || "Sin descripción",
+        originalAmount: debt.original_amount,
+        pendingAmount: debt.pending_amount,
+        paidAmount,
+        interestRate: debt.interest_rate || 0,
+        dueDate: new Date(debt.due_date),
+        status:
+          debt.pending_amount <= 0 ? "paid" : isOverdue ? "overdue" : "active",
+        daysOverdue: isOverdue
+          ? Math.floor(
+              (now.getTime() - debt.due_date.getTime()) / (1000 * 60 * 60 * 24)
+            )
+          : undefined,
+      };
+    });
+
+    return {
+      totalDebts: debts.length,
+      totalOriginalAmount,
+      totalPendingAmount,
+      totalPaidAmount,
+      averageInterestRate:
+        debts.length > 0 ? totalInterestRate / debts.length : 0,
+      overdueCount,
+      debts: debtData,
+      paymentTrends: [], // Se implementaría con datos de transacciones de pago
+    };
+  }
+
+  private async generateComprehensiveReport(
+    filters: ReportFilters
+  ): Promise<ComprehensiveReport> {
+    if (!filters.userId) {
+      throw new Error("User ID is required for comprehensive report");
+    }
+
+    // Obtener datos de todos los módulos
+    const [goalsData, budgetData, expenseData, incomeData] = await Promise.all([
+      this.generateSavingsSummaryReport(filters),
+      this.generateBudgetReport(filters),
+      this.generateExpenseReport(filters),
+      this.generateIncomeReport(filters),
+    ]);
+
+    const totalIncome = incomeData.totalIncome;
+    const totalExpenses = expenseData.totalExpenses;
+    const netBalance = totalIncome - totalExpenses;
+    const savingsRate = totalIncome > 0 ? (netBalance / totalIncome) * 100 : 0;
+
+    // Crear desglose por categoría combinando ingresos y gastos
+    const categoryMap = new Map();
+
+    // Agregar gastos por categoría
+    expenseData.topCategories.forEach((category) => {
+      categoryMap.set(category.categoryId, {
+        categoryId: category.categoryId,
+        categoryName: category.categoryName,
+        income: 0,
+        expenses: category.totalAmount,
+        netAmount: -category.totalAmount,
+      });
+    });
+
+    // Agregar ingresos por categoría
+    incomeData.topCategories.forEach((category) => {
+      if (categoryMap.has(category.categoryId)) {
+        const existing = categoryMap.get(category.categoryId);
+        existing.income = category.totalAmount;
+        existing.netAmount = category.totalAmount - existing.expenses;
+      } else {
+        categoryMap.set(category.categoryId, {
+          categoryId: category.categoryId,
+          categoryName: category.categoryName,
+          income: category.totalAmount,
+          expenses: 0,
+          netAmount: category.totalAmount,
+        });
+      }
+    });
+
+    // Agregar información de presupuestos si está disponible
+    budgetData.categoryBreakdown.forEach((budget) => {
+      if (categoryMap.has(budget.categoryId)) {
+        const existing = categoryMap.get(budget.categoryId);
+        existing.budgetLimit = budget.totalBudget;
+        existing.budgetUtilization = budget.utilization;
+      }
+    });
+
+    const categoryBreakdown = Array.from(categoryMap.values());
+
+    // Crear tendencias mensuales combinadas
+    const monthlyMap = new Map();
+
+    expenseData.monthlyTrends.forEach((month) => {
+      monthlyMap.set(month.month, {
+        month: month.month,
+        income: 0,
+        expenses: month.totalAmount,
+        balance: -month.totalAmount,
+        goalContributions: 0,
+        debtPayments: 0,
+      });
+    });
+
+    incomeData.monthlyTrends.forEach((month) => {
+      if (monthlyMap.has(month.month)) {
+        const existing = monthlyMap.get(month.month);
+        existing.income = month.totalAmount;
+        existing.balance = month.totalAmount - existing.expenses;
+      } else {
+        monthlyMap.set(month.month, {
+          month: month.month,
+          income: month.totalAmount,
+          expenses: 0,
+          balance: month.totalAmount,
+          goalContributions: 0,
+          debtPayments: 0,
+        });
+      }
+    });
+
+    const monthlyTrends = Array.from(monthlyMap.values()).sort((a, b) =>
+      a.month.localeCompare(b.month)
+    );
+
+    return {
+      period: {
+        startDate: filters.startDate || new Date(),
+        endDate: filters.endDate || new Date(),
+        label: `${
+          filters.startDate ? filters.startDate.toLocaleDateString() : "Inicio"
+        } - ${filters.endDate ? filters.endDate.toLocaleDateString() : "Fin"}`,
+      },
+      financialSummary: {
+        totalIncome,
+        totalExpenses,
+        netBalance,
+        savingsRate: Math.round(savingsRate * 100) / 100,
+      },
+      goals: {
+        totalGoals: goalsData.totalGoals,
+        completedGoals: goalsData.completedGoals,
+        inProgressGoals: goalsData.inProgressGoals,
+        totalTargetAmount: goalsData.totalTargetAmount,
+        totalCurrentAmount: goalsData.totalCurrentAmount,
+        overallProgress: Math.round(goalsData.overallProgress * 100) / 100,
+      },
+      budgets: {
+        totalBudgets: budgetData.totalBudgets,
+        totalBudgetAmount: budgetData.totalBudgetAmount,
+        totalSpent: budgetData.totalSpent,
+        overBudgetCount: budgetData.overBudgetCount,
+      },
+      debts: {
+        totalDebts: 0, // Se implementaría con datos reales
+        totalPendingAmount: 0,
+        totalPaidAmount: 0,
+        overdueCount: 0,
+      },
+      categoryBreakdown,
+      monthlyTrends,
+    };
   }
 
   private generateReportId(): string {

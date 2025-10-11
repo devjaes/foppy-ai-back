@@ -19,6 +19,90 @@ export class PDFService {
   private readonly ITEM_SPACING = 15;
   private readonly SECTION_SPACING = 20;
 
+  // Diccionario de traducciones
+  private readonly TRANSLATIONS = {
+    // Títulos principales
+    "Financial Report": "Reporte Financiero",
+    "Goals by Status": "Metas por Estado",
+    "Goals by Category": "Metas por Categoría",
+    "Budget Summary": "Resumen de Presupuestos",
+    "Expense Report": "Reporte de Gastos",
+    "Income Report": "Reporte de Ingresos",
+    "Debt Report": "Reporte de Deudas",
+    "Comprehensive Report": "Reporte Completo",
+    "Contributions by Goal": "Contribuciones por Meta",
+    "Savings Comparison": "Comparación de Ahorros",
+    "Savings Summary": "Resumen de Ahorros",
+
+    // Métricas y etiquetas
+    "Total Goals": "Total de Metas",
+    Completed: "Completadas",
+    "In Progress": "En Progreso",
+    Expired: "Expiradas",
+    Metric: "Métrica",
+    Value: "Valor",
+    "Total Budgets": "Total de Presupuestos",
+    "Total Expenses": "Total de Gastos",
+    "Total Income": "Total de Ingresos",
+    "Total Debts": "Total de Deudas",
+    Average: "Promedio",
+    Utilization: "Utilización",
+    "Over Budget": "Sobre Presupuesto",
+    "Under Budget": "Bajo Presupuesto",
+    "At Limit": "En el Límite",
+    Category: "Categoría",
+    Amount: "Cantidad",
+    Date: "Fecha",
+    Description: "Descripción",
+    Status: "Estado",
+    Progress: "Progreso",
+    Target: "Meta",
+    Current: "Actual",
+    Paid: "Pagado",
+    Pending: "Pendiente",
+    Overdue: "Vencida",
+    Active: "Activa",
+    "Interest Rate": "Tasa de Interés",
+    "Due Date": "Fecha de Vencimiento",
+    "Original Amount": "Monto Original",
+    "Paid Amount": "Monto Pagado",
+    "Pending Amount": "Monto Pendiente",
+    "Days Overdue": "Días de Retraso",
+
+    // Secciones
+    Summary: "Resumen",
+    Details: "Detalles",
+    Breakdown: "Desglose",
+    Trends: "Tendencias",
+    "Monthly Trends": "Tendencias Mensuales",
+    "Category Breakdown": "Desglose por Categoría",
+    "Top Categories": "Principales Categorías",
+    "Financial Summary": "Resumen Financiero",
+    "Goals Summary": "Resumen de Metas",
+    "Budgets Summary": "Resumen de Presupuestos",
+    "Debts Summary": "Resumen de Deudas",
+
+    // Estados y mensajes
+    "No data available": "No hay datos disponibles",
+    "No goals found": "No se encontraron metas",
+    "No budgets found": "No se encontraron presupuestos",
+    "No transactions found": "No se encontraron transacciones",
+    "No debts found": "No se encontraron deudas",
+    "Generated on": "Generado el",
+    Page: "Página",
+    of: "de",
+
+    // Footer
+    "All rights reserved": "Todos los derechos reservados",
+    Fopymes: "Fopymes",
+    "Financial Analysis": "Análisis Financiero",
+    "finances, report, goals, savings": "finanzas, reporte, metas, ahorro",
+  };
+
+  private translate(key: string): string {
+    return this.TRANSLATIONS[key] || key;
+  }
+
   async generatePDF(report: Report): Promise<Buffer> {
     // Si es un reporte de tipo GOAL, usamos el template
     if (report.type === ReportType.GOAL) {
@@ -68,6 +152,21 @@ export class PDFService {
           break;
         case ReportType.SAVINGS_SUMMARY:
           this.formatSavingsSummary(doc, report.data);
+          break;
+        case ReportType.BUDGET:
+          this.formatBudgetReport(doc, report.data);
+          break;
+        case ReportType.EXPENSE:
+          this.formatExpenseReport(doc, report.data);
+          break;
+        case ReportType.INCOME:
+          this.formatIncomeReport(doc, report.data);
+          break;
+        case ReportType.DEBT:
+          this.formatDebtReport(doc, report.data);
+          break;
+        case ReportType.COMPREHENSIVE:
+          this.formatComprehensiveReport(doc, report.data);
           break;
         default:
           reject(
@@ -178,10 +277,21 @@ export class PDFService {
     doc
       .fontSize(16)
       .fillColor("#ffffff")
-      .text("Reporte Financiero de Fopymes", 50, 20);
+      .text(
+        this.translate("Financial Report") + " de " + this.translate("Fopymes"),
+        50,
+        20
+      );
 
     const date = new Date().toLocaleDateString();
-    doc.fontSize(10).text(date, doc.page.width - 100, 20, { align: "right" });
+    doc
+      .fontSize(10)
+      .text(
+        this.translate("Generated on") + " " + date,
+        doc.page.width - 100,
+        20,
+        { align: "right" }
+      );
   }
 
   private addFooter(doc: typeof PDFDocument) {
@@ -200,15 +310,19 @@ export class PDFService {
       .fontSize(8)
       .fillColor("#ffffff")
       .text(
-        "© 2025 Fopymes. Todos los derechos reservados.",
+        "© 2025 " +
+          this.translate("Fopymes") +
+          ". " +
+          this.translate("All rights reserved") +
+          ".",
         50,
         pageHeight - 20
       );
 
     doc.text(
-      `Página ${doc.bufferedPageRange().start + 1} de ${
-        doc.bufferedPageRange().count
-      }`,
+      `${this.translate("Page")} ${
+        doc.bufferedPageRange().start + 1
+      } ${this.translate("of")} ${doc.bufferedPageRange().count}`,
       doc.page.width - 100,
       pageHeight - 20,
       { align: "right" }
@@ -319,7 +433,7 @@ export class PDFService {
     doc
       .fontSize(18)
       .fillColor(this.SECONDARY_COLOR)
-      .text("Metas por estado", 50, 100);
+      .text(this.translate("Goals by Status"), 50, 100);
     doc.moveDown();
 
     data.goals.forEach((goal: any) => {
@@ -330,24 +444,32 @@ export class PDFService {
       doc.fontSize(14).fillColor(this.PRIMARY_COLOR).text(goal.name);
       doc.moveDown();
 
-      this.drawDataItem(doc, "Estado", goal.status, 20);
-      this.drawDataItem(doc, "Meta", goal.targetAmount, 20);
-      this.drawDataItem(doc, "Ahorrado", goal.currentAmount, 20);
-      this.drawDataItem(doc, "Progreso", `${goal.progress}%`, 20);
-      this.drawDataItem(doc, "Plazo", goal.deadline, 20);
+      this.drawDataItem(doc, this.translate("Status"), goal.status, 20);
+      this.drawDataItem(doc, this.translate("Target"), goal.targetAmount, 20);
+      this.drawDataItem(doc, this.translate("Current"), goal.currentAmount, 20);
+      this.drawDataItem(
+        doc,
+        this.translate("Progress"),
+        `${goal.progress}%`,
+        20
+      );
+      this.drawDataItem(doc, this.translate("Due Date"), goal.deadline, 20);
       doc.moveDown();
     });
 
     // Summary table
-    doc.fontSize(16).fillColor(this.SECONDARY_COLOR).text("Resumen");
+    doc
+      .fontSize(16)
+      .fillColor(this.SECONDARY_COLOR)
+      .text(this.translate("Summary"));
     doc.moveDown();
 
-    const summaryHeaders = ["Métrica", "Valor"];
+    const summaryHeaders = [this.translate("Metric"), this.translate("Value")];
     const summaryRows = [
-      ["Total Metas", data.total],
-      ["Metas completadas", data.completed],
-      ["Metas expiradas", data.expired],
-      ["Metas en progreso", data.inProgress],
+      [this.translate("Total Goals"), data.total],
+      [this.translate("Completed"), data.completed],
+      [this.translate("Expired"), data.expired],
+      [this.translate("In Progress"), data.inProgress],
     ];
 
     this.drawSummaryTable(
@@ -364,7 +486,7 @@ export class PDFService {
     doc
       .fontSize(18)
       .fillColor(this.SECONDARY_COLOR)
-      .text("Metas de ahorro por categoría");
+      .text(this.translate("Goals by Category"));
     doc.moveDown();
 
     data.categories.forEach((category: any) => {
@@ -375,23 +497,53 @@ export class PDFService {
       doc.fontSize(16).fillColor(this.PRIMARY_COLOR).text(category.name);
       doc.moveDown();
 
-      this.drawDataItem(doc, "Total Metas", category.totalGoals, 20);
-      this.drawDataItem(doc, "Total Cantidad", category.totalAmount, 20);
-      this.drawDataItem(doc, "Ahorrado", category.completedAmount, 20);
-      this.drawDataItem(doc, "Progreso", `${category.progress}%`, 20);
+      this.drawDataItem(
+        doc,
+        this.translate("Total Goals"),
+        category.totalGoals,
+        20
+      );
+      this.drawDataItem(
+        doc,
+        this.translate("Total Amount"),
+        category.totalAmount,
+        20
+      );
+      this.drawDataItem(
+        doc,
+        this.translate("Current"),
+        category.completedAmount,
+        20
+      );
+      this.drawDataItem(
+        doc,
+        this.translate("Progress"),
+        `${category.progress}%`,
+        20
+      );
       doc.moveDown();
 
       doc
         .fontSize(14)
         .fillColor(this.SECONDARY_COLOR)
-        .text("Metas en esta categoría:");
+        .text(this.translate("Goals in this category") + ":");
       doc.moveDown();
 
       category.goals.forEach((goal: any) => {
-        this.drawDataItem(doc, "Meta de ahorro", goal.name, 40);
-        this.drawDataItem(doc, "Meta", goal.targetAmount, 40);
-        this.drawDataItem(doc, "Ahorrado", goal.currentAmount, 40);
-        this.drawDataItem(doc, "Progreso", `${goal.progress}%`, 40);
+        this.drawDataItem(doc, this.translate("Goal"), goal.name, 40);
+        this.drawDataItem(doc, this.translate("Target"), goal.targetAmount, 40);
+        this.drawDataItem(
+          doc,
+          this.translate("Current"),
+          goal.currentAmount,
+          40
+        );
+        this.drawDataItem(
+          doc,
+          this.translate("Progress"),
+          `${goal.progress}%`,
+          40
+        );
         doc.moveDown();
       });
     });
@@ -401,7 +553,7 @@ export class PDFService {
     doc
       .fontSize(18)
       .fillColor(this.SECONDARY_COLOR)
-      .text("Contribuciones por meta");
+      .text(this.translate("Contributions by Goal"));
     doc.moveDown();
 
     doc.fontSize(16).fillColor(this.PRIMARY_COLOR).text(data.goalName);
@@ -412,11 +564,11 @@ export class PDFService {
         this.addNewPage(doc);
       }
 
-      this.drawDataItem(doc, "Fecha", contribution.date, 20);
-      this.drawDataItem(doc, "Cantidad", contribution.amount, 20);
+      this.drawDataItem(doc, this.translate("Date"), contribution.date, 20);
+      this.drawDataItem(doc, this.translate("Amount"), contribution.amount, 20);
       this.drawDataItem(
         doc,
-        "ID de transacción",
+        this.translate("Transaction ID"),
         contribution.transactionId,
         20
       );
@@ -424,14 +576,17 @@ export class PDFService {
     });
 
     // Summary table
-    doc.fontSize(16).fillColor(this.SECONDARY_COLOR).text("Resumen");
+    doc
+      .fontSize(16)
+      .fillColor(this.SECONDARY_COLOR)
+      .text(this.translate("Summary"));
     doc.moveDown();
 
-    const summaryHeaders = ["Metric", "Value"];
+    const summaryHeaders = [this.translate("Metric"), this.translate("Value")];
     const summaryRows = [
-      ["Total Contribuciones", data.totalContributions],
-      ["Contribución promedio", data.averageContribution],
-      ["Última contribución", data.lastContributionDate],
+      [this.translate("Total Contributions"), data.totalContributions],
+      [this.translate("Average Contribution"), data.averageContribution],
+      [this.translate("Last Contribution"), data.lastContributionDate],
     ];
 
     this.drawSummaryTable(
@@ -448,7 +603,7 @@ export class PDFService {
     doc
       .fontSize(18)
       .fillColor(this.SECONDARY_COLOR)
-      .text("Comparación de ahorro");
+      .text(this.translate("Savings Comparison"));
     doc.moveDown();
 
     doc.fontSize(16).fillColor(this.PRIMARY_COLOR).text(data.goalName);
@@ -459,33 +614,54 @@ export class PDFService {
         this.addNewPage(doc);
       }
 
-      this.drawDataItem(doc, "Fecha", deviation.date, 20);
-      this.drawDataItem(doc, "Meta", deviation.plannedAmount, 20);
-      this.drawDataItem(doc, "Ahorrado", deviation.actualAmount, 20);
-      this.drawDataItem(doc, "Diferencia", deviation.difference, 20);
+      this.drawDataItem(doc, this.translate("Date"), deviation.date, 20);
+      this.drawDataItem(
+        doc,
+        this.translate("Target"),
+        deviation.plannedAmount,
+        20
+      );
+      this.drawDataItem(
+        doc,
+        this.translate("Current"),
+        deviation.actualAmount,
+        20
+      );
+      this.drawDataItem(
+        doc,
+        this.translate("Difference"),
+        deviation.difference,
+        20
+      );
       doc.moveDown();
     });
   }
 
   private formatSavingsSummary(doc: typeof PDFDocument, data: any) {
-    doc.fontSize(18).fillColor(this.SECONDARY_COLOR).text("Resumen de ahorro");
+    doc
+      .fontSize(18)
+      .fillColor(this.SECONDARY_COLOR)
+      .text(this.translate("Savings Summary"));
     doc.moveDown();
 
     // Overall metrics table
-    doc.fontSize(16).fillColor(this.PRIMARY_COLOR).text("Métricas generales");
+    doc
+      .fontSize(16)
+      .fillColor(this.PRIMARY_COLOR)
+      .text(this.translate("Overall Metrics"));
     doc.moveDown();
 
-    const metricsHeaders = ["Métrica", "Valor"];
+    const metricsHeaders = [this.translate("Metric"), this.translate("Value")];
     const metricsRows = [
-      ["Total Metas", data.totalGoals],
-      ["Meta total", data.totalTargetAmount],
-      ["Ahorrado total", data.totalCurrentAmount],
-      ["Progreso general", `${data.overallProgress}%`],
-      ["Metas completadas", data.completedGoals],
-      ["Metas expiradas", data.expiredGoals],
-      ["Metas en progreso", data.inProgressGoals],
-      ["Contribución promedio", data.averageContribution],
-      ["Última contribución", data.lastContributionDate],
+      [this.translate("Total Goals"), data.totalGoals],
+      [this.translate("Total Target"), data.totalTargetAmount],
+      [this.translate("Total Current"), data.totalCurrentAmount],
+      [this.translate("Overall Progress"), `${data.overallProgress}%`],
+      [this.translate("Completed"), data.completedGoals],
+      [this.translate("Expired"), data.expiredGoals],
+      [this.translate("In Progress"), data.inProgressGoals],
+      [this.translate("Average Contribution"), data.averageContribution],
+      [this.translate("Last Contribution"), data.lastContributionDate],
     ];
 
     this.drawSummaryTable(
@@ -502,7 +678,7 @@ export class PDFService {
     doc
       .fontSize(16)
       .fillColor(this.PRIMARY_COLOR)
-      .text("Desglose por categoría");
+      .text(this.translate("Category Breakdown"));
     doc.moveDown();
 
     data.categoryBreakdown.forEach((category: any) => {
@@ -510,10 +686,612 @@ export class PDFService {
         this.addNewPage(doc);
       }
 
-      this.drawDataItem(doc, "Categoría", category.categoryName, 20);
-      this.drawDataItem(doc, "Total Metas", category.totalGoals, 20);
-      this.drawDataItem(doc, "Total Cantidad", category.totalAmount, 20);
-      this.drawDataItem(doc, "Progreso", `${category.progress}%`, 20);
+      this.drawDataItem(
+        doc,
+        this.translate("Category"),
+        category.categoryName,
+        20
+      );
+      this.drawDataItem(
+        doc,
+        this.translate("Total Goals"),
+        category.totalGoals,
+        20
+      );
+      this.drawDataItem(
+        doc,
+        this.translate("Total Amount"),
+        category.totalAmount,
+        20
+      );
+      this.drawDataItem(
+        doc,
+        this.translate("Progress"),
+        `${category.progress}%`,
+        20
+      );
+      doc.moveDown();
+    });
+  }
+
+  private formatBudgetReport(doc: typeof PDFDocument, data: any) {
+    doc
+      .fontSize(18)
+      .fillColor(this.SECONDARY_COLOR)
+      .text(this.translate("Budget Summary"));
+    doc.moveDown();
+
+    // Resumen general
+    doc
+      .fontSize(16)
+      .fillColor(this.PRIMARY_COLOR)
+      .text(this.translate("Summary"));
+    doc.moveDown();
+
+    const summaryHeaders = [this.translate("Metric"), this.translate("Value")];
+    const summaryRows = [
+      [this.translate("Total Budgets"), data.totalBudgets],
+      [this.translate("Total Budget Amount"), data.totalBudgetAmount],
+      [this.translate("Total Spent"), data.totalSpent],
+      [
+        this.translate("Average Utilization"),
+        `${data.averageUtilization.toFixed(1)}%`,
+      ],
+      [this.translate("Over Budget"), data.overBudgetCount],
+    ];
+
+    this.drawSummaryTable(
+      doc,
+      summaryHeaders,
+      summaryRows,
+      50,
+      doc.y,
+      [200, 150]
+    );
+    doc.moveDown();
+
+    // Desglose por categoría
+    doc
+      .fontSize(16)
+      .fillColor(this.PRIMARY_COLOR)
+      .text(this.translate("Category Breakdown"));
+    doc.moveDown();
+
+    data.categoryBreakdown.forEach((category: any) => {
+      if (this.checkPageBreak(doc, this.SECTION_SPACING * 4)) {
+        this.addNewPage(doc);
+      }
+
+      this.drawDataItem(
+        doc,
+        this.translate("Category"),
+        category.categoryName,
+        20
+      );
+      this.drawDataItem(
+        doc,
+        this.translate("Total Budget"),
+        category.totalBudget,
+        20
+      );
+      this.drawDataItem(
+        doc,
+        this.translate("Total Spent"),
+        category.totalSpent,
+        20
+      );
+      this.drawDataItem(
+        doc,
+        this.translate("Utilization"),
+        `${category.utilization.toFixed(1)}%`,
+        20
+      );
+      this.drawDataItem(
+        doc,
+        this.translate("Budget Count"),
+        category.budgetCount,
+        20
+      );
+      doc.moveDown();
+    });
+
+    // Detalles de presupuestos
+    doc
+      .fontSize(16)
+      .fillColor(this.PRIMARY_COLOR)
+      .text(this.translate("Budget Details"));
+    doc.moveDown();
+
+    data.budgets.forEach((budget: any) => {
+      if (this.checkPageBreak(doc, this.SECTION_SPACING * 4)) {
+        this.addNewPage(doc);
+      }
+
+      this.drawDataItem(
+        doc,
+        this.translate("Category"),
+        budget.categoryName,
+        20
+      );
+      this.drawDataItem(
+        doc,
+        this.translate("Limit Amount"),
+        budget.limitAmount,
+        20
+      );
+      this.drawDataItem(
+        doc,
+        this.translate("Current Amount"),
+        budget.currentAmount,
+        20
+      );
+      this.drawDataItem(
+        doc,
+        this.translate("Utilization"),
+        `${budget.utilization.toFixed(1)}%`,
+        20
+      );
+      this.drawDataItem(doc, this.translate("Status"), budget.status, 20);
+      this.drawDataItem(doc, this.translate("Month"), budget.month, 20);
+      doc.moveDown();
+    });
+  }
+
+  private formatExpenseReport(doc: typeof PDFDocument, data: any) {
+    doc
+      .fontSize(18)
+      .fillColor(this.SECONDARY_COLOR)
+      .text(this.translate("Expense Report"));
+    doc.moveDown();
+
+    // Resumen general
+    doc
+      .fontSize(16)
+      .fillColor(this.PRIMARY_COLOR)
+      .text(this.translate("Summary"));
+    doc.moveDown();
+
+    const summaryHeaders = [this.translate("Metric"), this.translate("Value")];
+    const summaryRows = [
+      [this.translate("Total Expenses"), data.totalExpenses],
+      [this.translate("Total Transactions"), data.totalTransactions],
+      [this.translate("Average Expense"), data.averageExpense],
+    ];
+
+    this.drawSummaryTable(
+      doc,
+      summaryHeaders,
+      summaryRows,
+      50,
+      doc.y,
+      [200, 150]
+    );
+    doc.moveDown();
+
+    // Top categorías
+    doc
+      .fontSize(16)
+      .fillColor(this.PRIMARY_COLOR)
+      .text(this.translate("Top Categories"));
+    doc.moveDown();
+
+    data.topCategories.forEach((category: any) => {
+      if (this.checkPageBreak(doc, this.SECTION_SPACING * 3)) {
+        this.addNewPage(doc);
+      }
+
+      this.drawDataItem(
+        doc,
+        this.translate("Category"),
+        category.categoryName,
+        20
+      );
+      this.drawDataItem(
+        doc,
+        this.translate("Amount"),
+        category.totalAmount,
+        20
+      );
+      this.drawDataItem(
+        doc,
+        this.translate("Transaction Count"),
+        category.transactionCount,
+        20
+      );
+      this.drawDataItem(
+        doc,
+        this.translate("Percentage"),
+        `${category.percentage.toFixed(1)}%`,
+        20
+      );
+      doc.moveDown();
+    });
+
+    // Tendencias mensuales
+    doc
+      .fontSize(16)
+      .fillColor(this.PRIMARY_COLOR)
+      .text(this.translate("Monthly Trends"));
+    doc.moveDown();
+
+    data.monthlyTrends.forEach((trend: any) => {
+      if (this.checkPageBreak(doc, this.SECTION_SPACING * 3)) {
+        this.addNewPage(doc);
+      }
+
+      this.drawDataItem(doc, this.translate("Month"), trend.month, 20);
+      this.drawDataItem(
+        doc,
+        this.translate("Total Amount"),
+        trend.totalAmount,
+        20
+      );
+      this.drawDataItem(
+        doc,
+        this.translate("Transaction Count"),
+        trend.transactionCount,
+        20
+      );
+      doc.moveDown();
+    });
+  }
+
+  private formatIncomeReport(doc: typeof PDFDocument, data: any) {
+    doc
+      .fontSize(18)
+      .fillColor(this.SECONDARY_COLOR)
+      .text(this.translate("Income Report"));
+    doc.moveDown();
+
+    // Resumen general
+    doc
+      .fontSize(16)
+      .fillColor(this.PRIMARY_COLOR)
+      .text(this.translate("Summary"));
+    doc.moveDown();
+
+    const summaryHeaders = [this.translate("Metric"), this.translate("Value")];
+    const summaryRows = [
+      [this.translate("Total Income"), data.totalIncome],
+      [this.translate("Total Transactions"), data.totalTransactions],
+      [this.translate("Average Income"), data.averageIncome],
+    ];
+
+    this.drawSummaryTable(
+      doc,
+      summaryHeaders,
+      summaryRows,
+      50,
+      doc.y,
+      [200, 150]
+    );
+    doc.moveDown();
+
+    // Top categorías
+    doc
+      .fontSize(16)
+      .fillColor(this.PRIMARY_COLOR)
+      .text(this.translate("Top Categories"));
+    doc.moveDown();
+
+    data.topCategories.forEach((category: any) => {
+      if (this.checkPageBreak(doc, this.SECTION_SPACING * 3)) {
+        this.addNewPage(doc);
+      }
+
+      this.drawDataItem(
+        doc,
+        this.translate("Category"),
+        category.categoryName,
+        20
+      );
+      this.drawDataItem(
+        doc,
+        this.translate("Amount"),
+        category.totalAmount,
+        20
+      );
+      this.drawDataItem(
+        doc,
+        this.translate("Transaction Count"),
+        category.transactionCount,
+        20
+      );
+      this.drawDataItem(
+        doc,
+        this.translate("Percentage"),
+        `${category.percentage.toFixed(1)}%`,
+        20
+      );
+      doc.moveDown();
+    });
+
+    // Tendencias mensuales
+    doc
+      .fontSize(16)
+      .fillColor(this.PRIMARY_COLOR)
+      .text(this.translate("Monthly Trends"));
+    doc.moveDown();
+
+    data.monthlyTrends.forEach((trend: any) => {
+      if (this.checkPageBreak(doc, this.SECTION_SPACING * 3)) {
+        this.addNewPage(doc);
+      }
+
+      this.drawDataItem(doc, this.translate("Month"), trend.month, 20);
+      this.drawDataItem(
+        doc,
+        this.translate("Total Amount"),
+        trend.totalAmount,
+        20
+      );
+      this.drawDataItem(
+        doc,
+        this.translate("Transaction Count"),
+        trend.transactionCount,
+        20
+      );
+      doc.moveDown();
+    });
+  }
+
+  private formatDebtReport(doc: typeof PDFDocument, data: any) {
+    doc
+      .fontSize(18)
+      .fillColor(this.SECONDARY_COLOR)
+      .text(this.translate("Debt Report"));
+    doc.moveDown();
+
+    // Resumen general
+    doc
+      .fontSize(16)
+      .fillColor(this.PRIMARY_COLOR)
+      .text(this.translate("Summary"));
+    doc.moveDown();
+
+    const summaryHeaders = [this.translate("Metric"), this.translate("Value")];
+    const summaryRows = [
+      [this.translate("Total Debts"), data.totalDebts],
+      [this.translate("Total Original Amount"), data.totalOriginalAmount],
+      [this.translate("Total Pending Amount"), data.totalPendingAmount],
+      [this.translate("Total Paid Amount"), data.totalPaidAmount],
+      [
+        this.translate("Average Interest Rate"),
+        `${data.averageInterestRate.toFixed(2)}%`,
+      ],
+      [this.translate("Overdue Count"), data.overdueCount],
+    ];
+
+    this.drawSummaryTable(
+      doc,
+      summaryHeaders,
+      summaryRows,
+      50,
+      doc.y,
+      [200, 150]
+    );
+    doc.moveDown();
+
+    // Detalles de deudas
+    doc
+      .fontSize(16)
+      .fillColor(this.PRIMARY_COLOR)
+      .text(this.translate("Debt Details"));
+    doc.moveDown();
+
+    data.debts.forEach((debt: any) => {
+      if (this.checkPageBreak(doc, this.SECTION_SPACING * 6)) {
+        this.addNewPage(doc);
+      }
+
+      this.drawDataItem(
+        doc,
+        this.translate("Description"),
+        debt.description,
+        20
+      );
+      this.drawDataItem(
+        doc,
+        this.translate("Original Amount"),
+        debt.originalAmount,
+        20
+      );
+      this.drawDataItem(
+        doc,
+        this.translate("Pending Amount"),
+        debt.pendingAmount,
+        20
+      );
+      this.drawDataItem(
+        doc,
+        this.translate("Paid Amount"),
+        debt.paidAmount,
+        20
+      );
+      this.drawDataItem(
+        doc,
+        this.translate("Interest Rate"),
+        `${debt.interestRate}%`,
+        20
+      );
+      this.drawDataItem(doc, this.translate("Due Date"), debt.dueDate, 20);
+      this.drawDataItem(doc, this.translate("Status"), debt.status, 20);
+      if (debt.daysOverdue) {
+        this.drawDataItem(
+          doc,
+          this.translate("Days Overdue"),
+          debt.daysOverdue,
+          20
+        );
+      }
+      doc.moveDown();
+    });
+  }
+
+  private formatComprehensiveReport(doc: typeof PDFDocument, data: any) {
+    doc
+      .fontSize(18)
+      .fillColor(this.SECONDARY_COLOR)
+      .text(this.translate("Comprehensive Report"));
+    doc.moveDown();
+
+    // Información del período
+    doc
+      .fontSize(14)
+      .fillColor(this.PRIMARY_COLOR)
+      .text(`${this.translate("Period")}: ${data.period.label}`);
+    doc.moveDown();
+
+    // Resumen financiero
+    doc
+      .fontSize(16)
+      .fillColor(this.PRIMARY_COLOR)
+      .text(this.translate("Financial Summary"));
+    doc.moveDown();
+
+    const financialHeaders = [
+      this.translate("Metric"),
+      this.translate("Value"),
+    ];
+    const financialRows = [
+      [this.translate("Total Income"), data.financialSummary.totalIncome],
+      [this.translate("Total Expenses"), data.financialSummary.totalExpenses],
+      [this.translate("Net Balance"), data.financialSummary.netBalance],
+      [
+        this.translate("Savings Rate"),
+        `${data.financialSummary.savingsRate.toFixed(1)}%`,
+      ],
+    ];
+
+    this.drawSummaryTable(
+      doc,
+      financialHeaders,
+      financialRows,
+      50,
+      doc.y,
+      [200, 150]
+    );
+    doc.moveDown();
+
+    // Resumen de metas
+    doc
+      .fontSize(16)
+      .fillColor(this.PRIMARY_COLOR)
+      .text(this.translate("Goals Summary"));
+    doc.moveDown();
+
+    const goalsHeaders = [this.translate("Metric"), this.translate("Value")];
+    const goalsRows = [
+      [this.translate("Total Goals"), data.goals.totalGoals],
+      [this.translate("Completed Goals"), data.goals.completedGoals],
+      [this.translate("In Progress Goals"), data.goals.inProgressGoals],
+      [this.translate("Total Target Amount"), data.goals.totalTargetAmount],
+      [this.translate("Total Current Amount"), data.goals.totalCurrentAmount],
+      [
+        this.translate("Overall Progress"),
+        `${data.goals.overallProgress.toFixed(1)}%`,
+      ],
+    ];
+
+    this.drawSummaryTable(doc, goalsHeaders, goalsRows, 50, doc.y, [200, 150]);
+    doc.moveDown();
+
+    // Resumen de presupuestos
+    doc
+      .fontSize(16)
+      .fillColor(this.PRIMARY_COLOR)
+      .text(this.translate("Budgets Summary"));
+    doc.moveDown();
+
+    const budgetsHeaders = [this.translate("Metric"), this.translate("Value")];
+    const budgetsRows = [
+      [this.translate("Total Budgets"), data.budgets.totalBudgets],
+      [this.translate("Total Budget Amount"), data.budgets.totalBudgetAmount],
+      [this.translate("Total Spent"), data.budgets.totalSpent],
+      [this.translate("Over Budget Count"), data.budgets.overBudgetCount],
+    ];
+
+    this.drawSummaryTable(
+      doc,
+      budgetsHeaders,
+      budgetsRows,
+      50,
+      doc.y,
+      [200, 150]
+    );
+    doc.moveDown();
+
+    // Desglose por categoría
+    doc
+      .fontSize(16)
+      .fillColor(this.PRIMARY_COLOR)
+      .text(this.translate("Category Breakdown"));
+    doc.moveDown();
+
+    data.categoryBreakdown.forEach((category: any) => {
+      if (this.checkPageBreak(doc, this.SECTION_SPACING * 5)) {
+        this.addNewPage(doc);
+      }
+
+      this.drawDataItem(
+        doc,
+        this.translate("Category"),
+        category.categoryName,
+        20
+      );
+      this.drawDataItem(doc, this.translate("Income"), category.income, 20);
+      this.drawDataItem(doc, this.translate("Expenses"), category.expenses, 20);
+      this.drawDataItem(
+        doc,
+        this.translate("Net Amount"),
+        category.netAmount,
+        20
+      );
+      if (category.budgetLimit) {
+        this.drawDataItem(
+          doc,
+          this.translate("Budget Limit"),
+          category.budgetLimit,
+          20
+        );
+        this.drawDataItem(
+          doc,
+          this.translate("Budget Utilization"),
+          `${category.budgetUtilization.toFixed(1)}%`,
+          20
+        );
+      }
+      doc.moveDown();
+    });
+
+    // Tendencias mensuales
+    doc
+      .fontSize(16)
+      .fillColor(this.PRIMARY_COLOR)
+      .text(this.translate("Monthly Trends"));
+    doc.moveDown();
+
+    data.monthlyTrends.forEach((trend: any) => {
+      if (this.checkPageBreak(doc, this.SECTION_SPACING * 4)) {
+        this.addNewPage(doc);
+      }
+
+      this.drawDataItem(doc, this.translate("Month"), trend.month, 20);
+      this.drawDataItem(doc, this.translate("Income"), trend.income, 20);
+      this.drawDataItem(doc, this.translate("Expenses"), trend.expenses, 20);
+      this.drawDataItem(doc, this.translate("Balance"), trend.balance, 20);
+      this.drawDataItem(
+        doc,
+        this.translate("Goal Contributions"),
+        trend.goalContributions,
+        20
+      );
+      this.drawDataItem(
+        doc,
+        this.translate("Debt Payments"),
+        trend.debtPayments,
+        20
+      );
       doc.moveDown();
     });
   }
