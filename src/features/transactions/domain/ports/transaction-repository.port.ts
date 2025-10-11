@@ -28,6 +28,7 @@ export interface ITransactionRepository {
 	): Promise<
 		Array<{
 			categoryId: number;
+			categoryName: string | null;
 			total: number;
 		}>
 	>;
