@@ -4,7 +4,7 @@ export interface IUser {
   username: string;
   email: string;
   passwordHash: string;
-  registrationDate: Date;
+  registration_date: Date;
   active: boolean;
   recoveryToken?: string | null;
   recoveryTokenExpires?: Date | null;
