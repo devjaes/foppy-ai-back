@@ -12,114 +12,119 @@ import { addNewPage } from "./pdf-layout";
 
 export function formatTransactionsSummary(
   doc: typeof PDFDocument.prototype,
-  data: TransactionsSummaryReport
+  data: TransactionsSummaryReport,
+  reportTitle: string = "Resumen de Transacciones"
 ): void {
   const pageWidth = doc.page.width;
   const margin = 50;
   const contentWidth = pageWidth - margin * 2;
   const cardWidth = (contentWidth - 20) / 2;
 
+  const row1Y = doc.y;
   addMetricCard(
     doc,
-    "Total Income",
+    "Total Ingresos",
     formatCurrency(data.totalIncome),
     margin,
-    doc.y,
+    row1Y,
     cardWidth,
     "#10b981"
   );
   addMetricCard(
     doc,
-    "Total Expense",
+    "Total Gastos",
     formatCurrency(data.totalExpense),
     margin + cardWidth + 20,
-    doc.y - 80,
+    row1Y,
     cardWidth,
     "#ef4444"
   );
 
-  doc.moveDown(1);
+  doc.y = row1Y + 80;
+  
+  const row2Y = doc.y;
   addMetricCard(
     doc,
-    "Net Balance",
+    "Balance Neto",
     formatCurrency(data.netBalance),
     margin,
-    doc.y,
+    row2Y,
     cardWidth,
     "#3b82f6"
   );
   addMetricCard(
     doc,
-    "Transactions",
+    "Transacciones",
     `${data.transactionCount}`,
     margin + cardWidth + 20,
-    doc.y - 80,
+    row2Y,
     cardWidth,
     "#8b5cf6"
   );
 
-  doc.moveDown(1);
+  doc.y = row2Y + 80;
 
   if (data.totalIncome > 0 || data.totalExpense > 0) {
     doc
       .fontSize(14)
       .fillColor("#1f2937")
-      .text("Income vs Expense", margin, doc.y);
-    doc.moveDown(0.5);
+      .text("Ingresos vs Gastos", margin, doc.y);
+    doc.moveDown(1);
 
     const chartData = [
-      { label: "Income", value: data.totalIncome, color: "#10b981" },
-      { label: "Expense", value: data.totalExpense, color: "#ef4444" },
+      { label: "Ingresos", value: data.totalIncome, color: "#10b981" },
+      { label: "Gastos", value: data.totalExpense, color: "#ef4444" },
     ];
 
-    drawBarChart(doc, chartData, "Income vs Expense", contentWidth, 150);
+    drawBarChart(doc, chartData, "Ingresos vs Gastos", contentWidth, 150);
     doc.moveDown(2);
   }
 
   if (data.topIncomeCategory || data.topExpenseCategory) {
-    doc.fontSize(14).fillColor("#1f2937").text("Top Categories", margin, doc.y);
-    doc.moveDown(0.5);
+    doc.fontSize(14).fillColor("#1f2937").text("Categorías Principales", margin, doc.y);
+    doc.moveDown(1);
 
     const topCategoriesData = [];
     if (data.topIncomeCategory) {
       topCategoriesData.push([
-        "Top Income",
+        "Mayor Ingreso",
         data.topIncomeCategory.name,
         formatCurrency(data.topIncomeCategory.amount),
       ]);
     }
     if (data.topExpenseCategory) {
       topCategoriesData.push([
-        "Top Expense",
+        "Mayor Gasto",
         data.topExpenseCategory.name,
         formatCurrency(data.topExpenseCategory.amount),
       ]);
     }
 
-    const columnWidths = [100, 200, 150];
+    const columnWidths = [120, 200, 150];
     drawTable(
       doc,
-      ["Type", "Category", "Amount"],
+      ["Tipo", "Categoría", "Monto"],
       topCategoriesData,
-      columnWidths
+      columnWidths,
+      reportTitle
     );
     doc.moveDown(1);
   }
 
   if (data.transactions.length > 0) {
-    if (doc.y > 600) addNewPage(doc);
+    if (doc.y > 600) addNewPage(doc, reportTitle);
 
     doc
       .fontSize(14)
       .fillColor("#1f2937")
-      .text("Transaction Details", margin, doc.y);
-    doc.moveDown(0.5);
+      .text("Detalle de Transacciones", margin, doc.y);
+    doc.moveDown(1);
 
     const transactionsData = data.transactions
       .slice(0, 20)
       .map((t) => [
         formatDate(t.date),
-        t.type,
+        t.type === "INCOME" ? "Ingreso" : "Gasto",
         t.category || "N/A",
         formatCurrency(t.amount),
       ]);
@@ -127,49 +132,52 @@ export function formatTransactionsSummary(
     const columnWidths = [100, 80, 150, 120];
     drawTable(
       doc,
-      ["Date", "Type", "Category", "Amount"],
+      ["Fecha", "Tipo", "Categoría", "Monto"],
       transactionsData,
-      columnWidths
+      columnWidths,
+      reportTitle
     );
   }
 }
 
 export function formatExpensesByCategory(
   doc: typeof PDFDocument.prototype,
-  data: ExpensesByCategoryReport
+  data: ExpensesByCategoryReport,
+  reportTitle: string = "Gastos por Categoría"
 ): void {
   const pageWidth = doc.page.width;
   const margin = 50;
   const contentWidth = pageWidth - margin * 2;
   const cardWidth = (contentWidth - 20) / 2;
 
+  const rowY = doc.y;
   addMetricCard(
     doc,
-    "Total Expenses",
+    "Total Gastos",
     formatCurrency(data.totalExpenses),
     margin,
-    doc.y,
+    rowY,
     cardWidth,
     "#ef4444"
   );
   addMetricCard(
     doc,
-    "Categories",
+    "Categorías",
     `${data.categoryCount}`,
     margin + cardWidth + 20,
-    doc.y - 80,
+    rowY,
     cardWidth,
     "#3b82f6"
   );
 
-  doc.moveDown(1);
+  doc.y = rowY + 80;
 
   if (data.categories.length > 0) {
     doc
       .fontSize(14)
       .fillColor("#1f2937")
-      .text("Expense Distribution", margin, doc.y);
-    doc.moveDown(0.5);
+      .text("Distribución de Gastos", margin, doc.y);
+    doc.moveDown(1);
 
     const pieData = data.categories.slice(0, 10).map((cat) => ({
       label: cat.name,
@@ -177,16 +185,16 @@ export function formatExpensesByCategory(
       percentage: cat.percentage,
     }));
 
-    drawPieChart(doc, pieData, "Expense Distribution", 200);
+    drawPieChart(doc, pieData, "Distribución de Gastos", 200);
     doc.moveDown(2);
 
-    if (doc.y > 600) addNewPage(doc);
+    if (doc.y > 600) addNewPage(doc, reportTitle);
 
     doc
       .fontSize(14)
       .fillColor("#1f2937")
-      .text("Category Breakdown", margin, doc.y);
-    doc.moveDown(0.5);
+      .text("Desglose por Categoría", margin, doc.y);
+    doc.moveDown(1);
 
     const categoryData = data.categories.map((cat) => [
       cat.name,
@@ -198,91 +206,86 @@ export function formatExpensesByCategory(
     const columnWidths = [150, 120, 100, 100];
     drawTable(
       doc,
-      ["Category", "Amount", "Percentage", "Transactions"],
+      ["Categoría", "Monto", "Porcentaje", "Transacciones"],
       categoryData,
-      columnWidths
+      columnWidths,
+      reportTitle
     );
   }
 }
 
 export function formatMonthlyTrend(
   doc: typeof PDFDocument.prototype,
-  data: MonthlyTrendReport
+  data: MonthlyTrendReport,
+  reportTitle: string = "Tendencia Mensual"
 ): void {
   const pageWidth = doc.page.width;
   const margin = 50;
   const contentWidth = pageWidth - margin * 2;
   const cardWidth = (contentWidth - 30) / 3;
 
+  const rowY = doc.y;
   addMetricCard(
     doc,
-    "Avg Monthly Income",
+    "Ingreso Mensual Promedio",
     formatCurrency(data.averageMonthlyIncome),
     margin,
-    doc.y,
+    rowY,
     cardWidth,
     "#10b981"
   );
   addMetricCard(
     doc,
-    "Avg Monthly Expense",
+    "Gasto Mensual Promedio",
     formatCurrency(data.averageMonthlyExpense),
     margin + cardWidth + 15,
-    doc.y - 80,
+    rowY,
     cardWidth,
     "#ef4444"
   );
   addMetricCard(
     doc,
-    "Trend",
-    data.trend.toUpperCase(),
+    "Tendencia",
+    data.trend === "increasing" ? "CRECIENTE" : data.trend === "decreasing" ? "DECRECIENTE" : "ESTABLE",
     margin + (cardWidth + 15) * 2,
-    doc.y - 80,
+    rowY,
     cardWidth,
     "#3b82f6"
   );
 
-  doc.moveDown(1);
+  doc.y = rowY + 80;
 
   if (data.months.length > 0) {
     doc
       .fontSize(14)
       .fillColor("#1f2937")
-      .text("Monthly Financial Trend", margin, doc.y);
-    doc.moveDown(0.5);
+      .text("Tendencia Financiera Mensual", margin, doc.y);
+    doc.moveDown(1);
 
-    const lineData = data.months.map((m) => ({
-      label: m.month,
-      income: m.income,
-      expense: m.expense,
-      balance: m.balance,
-    }));
-
-    // Convert lineData to the expected format
     const formattedLineData = data.months.map((m) => ({
       label: m.month,
       values: [
-        { name: "Income", value: m.income, color: "#10b981" },
-        { name: "Expense", value: m.expense, color: "#ef4444" },
+        { name: "Ingresos", value: m.income, color: "#10b981" },
+        { name: "Gastos", value: m.expense, color: "#ef4444" },
         { name: "Balance", value: m.balance, color: "#3b82f6" },
       ],
     }));
     drawLineChart(
       doc,
       formattedLineData,
-      "Monthly Financial Trend",
+      "Tendencia Financiera Mensual",
       contentWidth,
       180
     );
     doc.moveDown(2);
 
-    if (doc.y > 600) addNewPage(doc);
+    if (doc.y > 600) addNewPage(doc, reportTitle);
 
     doc
       .fontSize(14)
       .fillColor("#1f2937")
-      .text("Monthly Details", margin, doc.y);
-    doc.moveDown(0.5);
+      .text("Detalle Mensual", margin, doc.y);
+    doc.moveDown(1);
 
     const monthData = data.months.map((m) => [
       m.month,
@@ -295,9 +298,10 @@ export function formatMonthlyTrend(
     const columnWidths = [100, 120, 120, 120, 100];
     drawTable(
       doc,
-      ["Month", "Income", "Expense", "Balance", "Transactions"],
+      ["Mes", "Ingresos", "Gastos", "Balance", "Transacciones"],
       monthData,
-      columnWidths
+      columnWidths,
+      reportTitle
     );
   }
 }

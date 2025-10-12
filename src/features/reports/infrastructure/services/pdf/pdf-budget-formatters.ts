@@ -1,116 +1,186 @@
 import PDFDocument from "pdfkit";
 import { BudgetPerformanceReport } from "../../../domain/entities/report.entity";
-import { addMetricCard, drawProgressBar } from "./pdf-components";
+import {
+  addSectionTitle,
+  addMetricCard,
+  drawProgressBar,
+} from "./pdf-components";
 import { drawTable } from "./pdf-table";
-import { formatCurrency } from "./pdf-utils";
+import {
+  formatCurrency,
+  COLORS,
+  DIMENSIONS,
+  checkPageBreak,
+} from "./pdf-utils";
 import { addNewPage } from "./pdf-layout";
 
 export function formatBudgetPerformance(
   doc: typeof PDFDocument.prototype,
-  data: BudgetPerformanceReport
+  data: BudgetPerformanceReport,
+  reportTitle: string = "Rendimiento de Presupuestos"
 ): void {
-  const pageWidth = doc.page.width;
-  const margin = 50;
-  const contentWidth = pageWidth - margin * 2;
-  const cardWidth = (contentWidth - 30) / 4;
+  if (!data) {
+    doc.fontSize(12).fillColor(COLORS.TEXT).text("No hay datos disponibles");
+    return;
+  }
+
+  addSectionTitle(doc, "Rendimiento de Presupuestos", reportTitle);
+
+  const cardY = doc.y;
+  const cardWidth = 110;
+  const cardSpacing = 15;
 
   addMetricCard(
     doc,
-    "Total Budgets",
-    `${data.totalBudgets}`,
-    margin,
-    doc.y,
+    "Total Presupuestos",
+    data.totalBudgets?.toString() || "0",
+    DIMENSIONS.MARGIN,
+    cardY,
     cardWidth,
-    "#3b82f6"
+    COLORS.SECONDARY
   );
   addMetricCard(
     doc,
-    "Exceeded",
-    `${data.exceededCount}`,
-    margin + cardWidth + 10,
-    doc.y - 80,
+    "Excedidos",
+    data.exceededCount?.toString() || "0",
+    DIMENSIONS.MARGIN + cardWidth + cardSpacing,
+    cardY,
     cardWidth,
-    "#ef4444"
+    COLORS.DANGER
   );
   addMetricCard(
     doc,
-    "Warning",
-    `${data.warningCount}`,
-    margin + (cardWidth + 10) * 2,
-    doc.y - 80,
+    "Advertencia",
+    data.warningCount?.toString() || "0",
+    DIMENSIONS.MARGIN + 2 * (cardWidth + cardSpacing),
+    cardY,
     cardWidth,
-    "#f59e0b"
+    COLORS.WARNING
   );
   addMetricCard(
     doc,
-    "Good",
-    `${data.goodCount}`,
-    margin + (cardWidth + 10) * 3,
-    doc.y - 80,
+    "Buenos",
+    data.goodCount?.toString() || "0",
+    DIMENSIONS.MARGIN + 3 * (cardWidth + cardSpacing),
+    cardY,
     cardWidth,
-    "#10b981"
+    COLORS.ACCENT
   );
 
+  doc.y = cardY + 70;
   doc.moveDown(1);
 
-  if (data.budgets.length > 0) {
-    doc.fontSize(14).fillColor("#1f2937").text("Budget Details", margin, doc.y);
-    doc.moveDown(0.5);
+  if (data.budgets && data.budgets.length > 0) {
+    addSectionTitle(doc, "Detalle de Presupuestos", reportTitle);
 
     data.budgets.forEach((budget, index) => {
-      if (doc.y > 650) addNewPage(doc);
+      if (checkPageBreak(doc, 120)) {
+        addNewPage(doc, reportTitle);
+      }
+
+      if (index > 0) {
+        doc.moveDown(1);
+      }
+
+      const statusColor =
+        budget.status === "exceeded"
+          ? COLORS.DANGER
+          : budget.status === "warning"
+          ? COLORS.WARNING
+          : COLORS.ACCENT;
+      const statusLabel =
+        budget.status === "exceeded"
+          ? "EXCEDIDO"
+          : budget.status === "warning"
+          ? "ADVERTENCIA"
+          : "BUENO";
 
       doc
-        .fontSize(12)
-        .fillColor("#1f2937")
-        .text(`${budget.categoryName} (${budget.month})`, margin, doc.y);
-      doc.moveDown(0.3);
+        .fontSize(13)
+        .fillColor(COLORS.PRIMARY)
+        .font("Helvetica-Bold")
+        .text(
+          budget.categoryName || "Sin categoría",
+          DIMENSIONS.MARGIN,
+          doc.y,
+          { continued: true }
+        )
+        .fontSize(9)
+        .fillColor(statusColor)
+        .text(` [${statusLabel}]`, { continued: false });
 
-      doc.fontSize(10).fillColor("#6b7280");
-      doc.text(
-        `Limit: ${formatCurrency(
-          budget.limitAmount
-        )} | Current: ${formatCurrency(budget.currentAmount)}`,
-        margin,
-        doc.y
-      );
       doc.moveDown(0.5);
 
-      const color =
-        budget.status === "exceeded"
-          ? "#ef4444"
-          : budget.status === "warning"
-          ? "#f59e0b"
-          : "#10b981";
+      const col1X = DIMENSIONS.MARGIN;
+      const col2X = DIMENSIONS.MARGIN + 250;
+      const rowY = doc.y;
 
-      drawProgressBar(doc, margin, doc.y, contentWidth, budget.percentage);
+      doc
+        .fontSize(10)
+        .fillColor(COLORS.TEXT)
+        .font("Helvetica")
+        .text(`Límite: ${formatCurrency(budget.limitAmount || 0)}`, col1X, rowY)
+        .text(`Mes: ${budget.month || "N/A"}`, col2X, rowY);
+
+      doc.moveDown(0.8);
+      const row2Y = doc.y;
+
+      doc
+        .text(
+          `Actual: ${formatCurrency(budget.currentAmount || 0)}`,
+          col1X,
+          row2Y
+        )
+        .text(`Uso: ${(budget.percentage || 0).toFixed(1)}%`, col2X, row2Y);
+
       doc.moveDown(1);
 
-      if (index < data.budgets.length - 1) {
-        doc.moveDown(0.5);
-      }
+      drawProgressBar(
+        doc,
+        DIMENSIONS.MARGIN,
+        doc.y,
+        450,
+        budget.percentage || 0
+      );
+
+      doc.moveDown(1.5);
     });
 
-    if (doc.y > 600) addNewPage(doc);
+    if (checkPageBreak(doc, 200)) {
+      addNewPage(doc, reportTitle);
+    }
 
-    doc.fontSize(14).fillColor("#1f2937").text("Summary Table", margin, doc.y);
-    doc.moveDown(0.5);
+    addSectionTitle(doc, "Resumen en Tabla", reportTitle);
 
     const budgetData = data.budgets.map((b) => [
-      b.categoryName,
-      b.month,
-      formatCurrency(b.limitAmount),
-      formatCurrency(b.currentAmount),
-      `${b.percentage.toFixed(1)}%`,
-      b.status.toUpperCase(),
+      b.categoryName || "Sin categoría",
+      b.month || "N/A",
+      formatCurrency(b.limitAmount || 0),
+      formatCurrency(b.currentAmount || 0),
+      `${(b.percentage || 0).toFixed(1)}%`,
+      b.status === "exceeded"
+        ? "EXCEDIDO"
+        : b.status === "warning"
+        ? "ADVERTENCIA"
+        : "BUENO",
     ]);
 
-    const columnWidths = [120, 80, 100, 100, 80, 80];
+    const columnWidths = [140, 80, 100, 100, 80, 100];
     drawTable(
       doc,
-      ["Category", "Month", "Limit", "Current", "Used", "Status"],
+      ["Categoría", "Mes", "Límite", "Actual", "Uso", "Estado"],
       budgetData,
-      columnWidths
+      columnWidths,
+      reportTitle
     );
+  } else {
+    doc
+      .fontSize(11)
+      .fillColor(COLORS.TEXT)
+      .text(
+        "No se encontraron presupuestos para mostrar",
+        DIMENSIONS.MARGIN,
+        doc.y
+      );
   }
 }

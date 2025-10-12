@@ -47,7 +47,7 @@ const generateReportHandler = createHandler(async (c: Context<AppBindings>) => {
       startDate: filters.startDate ? new Date(filters.startDate) : undefined,
       endDate: filters.endDate ? new Date(filters.endDate) : undefined,
       // ADDED: Para reportes, siempre usar 'created_at' para filtrar metas
-      filterBy: 'created_at' as const,
+      filterBy: "created_at" as const,
     };
 
     // FIXED: Validar que goalId sea proporcionado cuando se requiere
@@ -67,8 +67,12 @@ const generateReportHandler = createHandler(async (c: Context<AppBindings>) => {
       );
     }
 
-    const report = await reportService.generateReport(type, format, processedFilters);
-    
+    const report = await reportService.generateReport(
+      type,
+      format,
+      processedFilters
+    );
+
     return c.json(
       {
         success: true,
@@ -106,7 +110,7 @@ const getReportHandler = createHandler(async (c: Context<AppBindings>) => {
     if (report.format === ReportFormat.PDF) {
       const pdfBuffer = await pdfService.generatePDF(report);
 
-      return new Response(pdfBuffer, {
+      return new Response(new Uint8Array(pdfBuffer), {
         status: HttpStatusCodes.OK,
         headers: {
           "Content-Type": "application/pdf",
@@ -117,7 +121,7 @@ const getReportHandler = createHandler(async (c: Context<AppBindings>) => {
 
     if (report.format === ReportFormat.EXCEL) {
       const excelBuffer = await excelService.generateExcel(report);
-      return new Response(excelBuffer, {
+      return new Response(new Uint8Array(excelBuffer), {
         status: HttpStatusCodes.OK,
         headers: {
           "Content-Type":
@@ -129,7 +133,7 @@ const getReportHandler = createHandler(async (c: Context<AppBindings>) => {
 
     if (report.format === ReportFormat.CSV) {
       const csvBuffer = await csvService.generateCSV(report);
-      return new Response(csvBuffer, {
+      return new Response(new TextEncoder().encode(csvBuffer), {
         status: HttpStatusCodes.OK,
         headers: {
           "Content-Type": "text/csv",
@@ -147,12 +151,14 @@ const getReportHandler = createHandler(async (c: Context<AppBindings>) => {
           type: report.type,
           format: report.format,
           data: report.data,
-          createdAt: typeof report.createdAt === 'string' 
-            ? report.createdAt 
-            : report.createdAt?.toISOString(),
-          expiresAt: typeof report.expiresAt === 'string'
-            ? report.expiresAt
-            : report.expiresAt?.toISOString(),
+          createdAt:
+            typeof report.createdAt === "string"
+              ? report.createdAt
+              : report.createdAt?.toISOString(),
+          expiresAt:
+            typeof report.expiresAt === "string"
+              ? report.expiresAt
+              : report.expiresAt?.toISOString(),
         },
         message: "Report retrieved successfully",
       },
@@ -160,7 +166,7 @@ const getReportHandler = createHandler(async (c: Context<AppBindings>) => {
     );
   } catch (error) {
     console.error("Error retrieving report:", error);
-    
+
     return c.json(
       {
         success: false,

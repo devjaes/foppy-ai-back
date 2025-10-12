@@ -1,243 +1,272 @@
 import PDFDocument from "pdfkit";
 import { FinancialOverviewReport } from "../../../domain/entities/report.entity";
-import { addMetricCard, drawProgressBar } from "./pdf-components";
+import {
+  addSectionTitle,
+  addMetricCard,
+  drawProgressBar,
+} from "./pdf-components";
 import { drawTable } from "./pdf-table";
 import { drawBarChart, drawPieChart } from "./pdf-charts";
-import { formatCurrency, formatDate } from "./pdf-utils";
+import {
+  formatCurrency,
+  formatDate,
+  COLORS,
+  DIMENSIONS,
+  checkPageBreak,
+} from "./pdf-utils";
 import { addNewPage } from "./pdf-layout";
 
 export function formatFinancialOverview(
   doc: typeof PDFDocument.prototype,
-  data: FinancialOverviewReport
+  data: FinancialOverviewReport,
+  reportTitle: string = "Vista General Financiera"
 ): void {
-  const pageWidth = doc.page.width;
-  const margin = 50;
-  const contentWidth = pageWidth - margin * 2;
-  const cardWidth = (contentWidth - 30) / 4;
+  if (!data) {
+    doc.fontSize(12).fillColor(COLORS.TEXT).text("No hay datos disponibles");
+    return;
+  }
+
+  addSectionTitle(doc, "Resumen Financiero General", reportTitle);
 
   doc
-    .fontSize(12)
-    .fillColor("#6b7280")
+    .fontSize(10)
+    .fillColor(COLORS.TEXT)
     .text(
-      `Period: ${formatDate(data.period.startDate)} - ${formatDate(
-        data.period.endDate
+      `Período: ${formatDate(data.period?.startDate)} - ${formatDate(
+        data.period?.endDate
       )}`,
-      margin,
+      DIMENSIONS.MARGIN,
       doc.y
     );
   doc.moveDown(1);
 
-  doc
-    .fontSize(14)
-    .fillColor("#1f2937")
-    .text("Financial Summary", margin, doc.y);
-  doc.moveDown(0.5);
+  const cardY = doc.y;
+  const cardWidth = 110;
+  const cardSpacing = 15;
 
   addMetricCard(
     doc,
-    "Total Income",
-    formatCurrency(data.summary.totalIncome),
-    margin,
-    doc.y,
+    "Total Ingresos",
+    formatCurrency(data.summary?.totalIncome || 0),
+    DIMENSIONS.MARGIN,
+    cardY,
     cardWidth,
-    "#10b981"
+    COLORS.ACCENT
   );
   addMetricCard(
     doc,
-    "Total Expense",
-    formatCurrency(data.summary.totalExpense),
-    margin + cardWidth + 10,
-    doc.y - 80,
+    "Total Gastos",
+    formatCurrency(data.summary?.totalExpense || 0),
+    DIMENSIONS.MARGIN + cardWidth + cardSpacing,
+    cardY,
     cardWidth,
-    "#ef4444"
+    COLORS.DANGER
   );
   addMetricCard(
     doc,
-    "Net Balance",
-    formatCurrency(data.summary.netBalance),
-    margin + (cardWidth + 10) * 2,
-    doc.y - 80,
+    "Balance Neto",
+    formatCurrency(data.summary?.netBalance || 0),
+    DIMENSIONS.MARGIN + 2 * (cardWidth + cardSpacing),
+    cardY,
     cardWidth,
-    "#3b82f6"
+    COLORS.SECONDARY
   );
   addMetricCard(
     doc,
-    "Savings Rate",
-    `${data.summary.savingsRate.toFixed(1)}%`,
-    margin + (cardWidth + 10) * 3,
-    doc.y - 80,
+    "Tasa de Ahorro",
+    `${(data.summary?.savingsRate || 0).toFixed(1)}%`,
+    DIMENSIONS.MARGIN + 3 * (cardWidth + cardSpacing),
+    cardY,
     cardWidth,
-    "#8b5cf6"
+    COLORS.PRIMARY
   );
 
+  doc.y = cardY + 70;
   doc.moveDown(1);
 
-  if (data.summary.totalIncome > 0 || data.summary.totalExpense > 0) {
-    doc
-      .fontSize(14)
-      .fillColor("#1f2937")
-      .text("Income vs Expense", margin, doc.y);
-    doc.moveDown(0.5);
+  if (
+    (data.summary?.totalIncome || 0) > 0 ||
+    (data.summary?.totalExpense || 0) > 0
+  ) {
+    addSectionTitle(doc, "Ingresos vs Gastos", reportTitle);
 
     const chartData = [
-      { label: "Income", value: data.summary.totalIncome, color: "#10b981" },
-      { label: "Expense", value: data.summary.totalExpense, color: "#ef4444" },
+      {
+        label: "Ingresos",
+        value: data.summary?.totalIncome || 0,
+        color: COLORS.ACCENT,
+      },
+      {
+        label: "Gastos",
+        value: data.summary?.totalExpense || 0,
+        color: COLORS.DANGER,
+      },
     ];
 
-    drawBarChart(doc, chartData, "Income vs Expense", contentWidth, 150);
+    drawBarChart(doc, chartData, "Ingresos vs Gastos", 450, 150);
     doc.moveDown(2);
   }
 
-  if (doc.y > 600) addNewPage(doc);
+  if (checkPageBreak(doc, 200)) {
+    addNewPage(doc, reportTitle);
+  }
 
-  doc.fontSize(14).fillColor("#1f2937").text("Goals Overview", margin, doc.y);
-  doc.moveDown(0.5);
+  addSectionTitle(doc, "Resumen de Metas", reportTitle);
 
-  const goalCardWidth = (contentWidth - 20) / 3;
+  const goalCardY = doc.y;
+  const goalCardWidth = 120;
+  const goalCardSpacing = 15;
+
   addMetricCard(
     doc,
-    "Total Goals",
-    `${data.goals.total}`,
-    margin,
-    doc.y,
+    "Total Metas",
+    (data.goals?.total || 0).toString(),
+    DIMENSIONS.MARGIN,
+    goalCardY,
     goalCardWidth,
-    "#3b82f6"
+    COLORS.SECONDARY
   );
   addMetricCard(
     doc,
-    "Completed",
-    `${data.goals.completed}`,
-    margin + goalCardWidth + 10,
-    doc.y - 70,
+    "Completadas",
+    (data.goals?.completed || 0).toString(),
+    DIMENSIONS.MARGIN + goalCardWidth + goalCardSpacing,
+    goalCardY,
     goalCardWidth,
-    "#10b981"
+    COLORS.ACCENT
   );
   addMetricCard(
     doc,
-    "In Progress",
-    `${data.goals.inProgress}`,
-    margin + (goalCardWidth + 10) * 2,
-    doc.y - 70,
+    "En Progreso",
+    (data.goals?.inProgress || 0).toString(),
+    DIMENSIONS.MARGIN + 2 * (goalCardWidth + goalCardSpacing),
+    goalCardY,
     goalCardWidth,
-    "#f59e0b"
+    COLORS.WARNING
   );
 
+  doc.y = goalCardY + 70;
   doc.moveDown(0.8);
 
   doc
     .fontSize(10)
-    .fillColor("#6b7280")
+    .fillColor(COLORS.TEXT)
     .text(
-      `Saved: ${formatCurrency(
-        data.goals.totalSaved
-      )} / Target: ${formatCurrency(data.goals.totalTarget)}`,
-      margin,
+      `Ahorrado: ${formatCurrency(
+        data.goals?.totalSaved || 0
+      )} / Meta: ${formatCurrency(data.goals?.totalTarget || 0)}`,
+      DIMENSIONS.MARGIN,
       doc.y
     );
   doc.moveDown(0.5);
 
-  drawProgressBar(doc, margin, doc.y, contentWidth, data.goals.overallProgress);
-  doc.moveDown(1);
-
-  doc.fontSize(14).fillColor("#1f2937").text("Budgets Overview", margin, doc.y);
-  doc.moveDown(0.5);
-
-  const budgetCardWidth = (contentWidth - 20) / 3;
-  addMetricCard(
+  drawProgressBar(
     doc,
-    "Total Budgets",
-    `${data.budgets.total}`,
-    margin,
+    DIMENSIONS.MARGIN,
     doc.y,
-    budgetCardWidth,
-    "#3b82f6"
+    450,
+    data.goals?.overallProgress || 0
   );
-  addMetricCard(
-    doc,
-    "Exceeded",
-    `${data.budgets.exceeded}`,
-    margin + budgetCardWidth + 10,
-    doc.y - 70,
-    budgetCardWidth,
-    "#ef4444"
-  );
-  addMetricCard(
-    doc,
-    "Avg Usage",
-    `${data.budgets.averageUtilization.toFixed(1)}%`,
-    margin + (budgetCardWidth + 10) * 2,
-    doc.y - 70,
-    budgetCardWidth,
-    "#f59e0b"
-  );
-
   doc.moveDown(1);
 
-  if (doc.y > 600) addNewPage(doc);
+  addSectionTitle(doc, "Resumen de Presupuestos", reportTitle);
 
-  if (data.topCategories.expenses.length > 0) {
-    doc
-      .fontSize(14)
-      .fillColor("#1f2937")
-      .text("Top Expense Categories", margin, doc.y);
-    doc.moveDown(0.5);
+  const budgetCardY = doc.y;
+  const budgetCardWidth = 120;
+  const budgetCardSpacing = 15;
+
+  addMetricCard(
+    doc,
+    "Total Presupuestos",
+    (data.budgets?.total || 0).toString(),
+    DIMENSIONS.MARGIN,
+    budgetCardY,
+    budgetCardWidth,
+    COLORS.SECONDARY
+  );
+  addMetricCard(
+    doc,
+    "Excedidos",
+    (data.budgets?.exceeded || 0).toString(),
+    DIMENSIONS.MARGIN + budgetCardWidth + budgetCardSpacing,
+    budgetCardY,
+    budgetCardWidth,
+    COLORS.DANGER
+  );
+  addMetricCard(
+    doc,
+    "Uso Promedio",
+    `${(data.budgets?.averageUtilization || 0).toFixed(1)}%`,
+    DIMENSIONS.MARGIN + 2 * (budgetCardWidth + budgetCardSpacing),
+    budgetCardY,
+    budgetCardWidth,
+    COLORS.WARNING
+  );
+
+  doc.y = budgetCardY + 70;
+  doc.moveDown(1);
+
+  if (checkPageBreak(doc, 200)) {
+    addNewPage(doc, reportTitle);
+  }
+
+  if (data.topCategories?.expenses && data.topCategories.expenses.length > 0) {
+    addSectionTitle(doc, "Categorías de Gastos Principales", reportTitle);
 
     const expensePieData = data.topCategories.expenses.map((cat) => ({
-      label: cat.name,
-      value: cat.amount,
-      percentage: cat.percentage,
+      label: cat.name || "Sin nombre",
+      value: cat.amount || 0,
+      percentage: cat.percentage || 0,
     }));
 
-    drawPieChart(doc, expensePieData, "Top Expense Categories", 180);
+    drawPieChart(doc, expensePieData, "Categorías de Gastos Principales", 180);
     doc.moveDown(2);
   }
 
-  if (doc.y > 600) addNewPage(doc);
+  if (checkPageBreak(doc, 200)) {
+    addNewPage(doc, reportTitle);
+  }
 
-  if (data.topCategories.expenses.length > 0) {
-    doc
-      .fontSize(14)
-      .fillColor("#1f2937")
-      .text("Top Expenses Breakdown", margin, doc.y);
-    doc.moveDown(0.5);
+  if (data.topCategories?.expenses && data.topCategories.expenses.length > 0) {
+    addSectionTitle(doc, "Desglose de Gastos Principales", reportTitle);
 
     const expenseData = data.topCategories.expenses.map((cat) => [
-      cat.name,
-      formatCurrency(cat.amount),
-      `${cat.percentage.toFixed(1)}%`,
+      cat.name || "Sin nombre",
+      formatCurrency(cat.amount || 0),
+      `${(cat.percentage || 0).toFixed(1)}%`,
     ]);
 
     const columnWidths = [150, 120, 100];
     drawTable(
       doc,
-      ["Category", "Amount", "Percentage"],
+      ["Categoría", "Monto", "Porcentaje"],
       expenseData,
-      columnWidths
+      columnWidths,
+      reportTitle
     );
     doc.moveDown(1);
   }
 
-  if (data.topCategories.income.length > 0) {
-    if (doc.y > 600) addNewPage(doc);
+  if (data.topCategories?.income && data.topCategories.income.length > 0) {
+    if (checkPageBreak(doc, 200)) {
+      addNewPage(doc, reportTitle);
+    }
 
-    doc
-      .fontSize(14)
-      .fillColor("#1f2937")
-      .text("Top Income Breakdown", margin, doc.y);
-    doc.moveDown(0.5);
+    addSectionTitle(doc, "Desglose de Ingresos Principales", reportTitle);
 
     const incomeData = data.topCategories.income.map((cat) => [
-      cat.name,
-      formatCurrency(cat.amount),
-      `${cat.percentage.toFixed(1)}%`,
+      cat.name || "Sin nombre",
+      formatCurrency(cat.amount || 0),
+      `${(cat.percentage || 0).toFixed(1)}%`,
     ]);
 
     const columnWidths = [150, 120, 100];
     drawTable(
       doc,
-      ["Category", "Amount", "Percentage"],
+      ["Categoría", "Monto", "Porcentaje"],
       incomeData,
-      columnWidths
+      columnWidths,
+      reportTitle
     );
   }
 }

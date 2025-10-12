@@ -2,9 +2,9 @@ import PDFDocument from "pdfkit";
 import { COLORS, DIMENSIONS, SPACING, checkPageBreak } from "./pdf-utils";
 import { addNewPage } from "./pdf-layout";
 
-export function addSectionTitle(doc: typeof PDFDocument, title: string) {
+export function addSectionTitle(doc: typeof PDFDocument, title: string, reportTitle?: string) {
   if (checkPageBreak(doc, 40)) {
-    addNewPage(doc);
+    addNewPage(doc, reportTitle);
   }
 
   doc

@@ -61,6 +61,19 @@ export class PgGoalRepository implements IGoalRepository {
     return result.map((row) => this.mapToEntity(row.goal, row.category));
   }
 
+  async findSharedWithUser(userId: number): Promise<IGoal[]> {
+    const result = await this.db
+      .select({
+        goal: goals,
+        category: categories,
+      })
+      .from(goals)
+      .leftJoin(categories, eq(goals.category_id, categories.id))
+      .where(eq(goals.shared_user_id, userId));
+
+    return result.map((row) => this.mapToEntity(row.goal, row.category));
+  }
+
   async create(goal: IGoal): Promise<IGoal> {
     const result = await this.db
       .insert(goals)
@@ -72,8 +85,8 @@ export class PgGoalRepository implements IGoalRepository {
         current_amount: goal.currentAmount.toString(),
         end_date: goal.endDate,
         category_id: goal.categoryId,
-        contribution_frequency: goal.contributionFrequency,
-        contribution_amount: goal.contributionAmount.toString(),
+        contribution_frequency: goal.contributionFrequency || 0,
+        contribution_amount: goal.contributionAmount?.toString() || "0",
       })
       .returning();
 
@@ -98,7 +111,7 @@ export class PgGoalRepository implements IGoalRepository {
         end_date: goal.endDate,
         category_id: goal.categoryId,
         shared_user_id: goal.sharedUserId,
-        contribution_frequency: goal.contributionFrequency,
+        contribution_frequency: goal.contributionFrequency ?? undefined,
         contribution_amount: goal.contributionAmount?.toString(),
       })
       .where(eq(goals.id, id))
@@ -126,14 +139,6 @@ export class PgGoalRepository implements IGoalRepository {
       .where(eq(goals.id, id));
 
     if (result.length === 0) return null;
-
-    const category = result[0].category_id
-      ? await this.db
-          .select()
-          .from(categories)
-          .where(eq(categories.id, result[0].category_id))
-          .then((result) => result[0])
-      : null;
 
     return this.mapToEntity(result[0].goal, result[0].category);
   }
@@ -193,7 +198,7 @@ export class PgGoalRepository implements IGoalRepository {
     // FIXED: Determinar qué campo usar para filtrar fechas
     // Default: 'end_date' (para dashboard - metas que vencen en el período)
     // Opción: 'created_at' (para reportes - metas creadas en el período)
-    const useCreatedAt = filters.filterBy === 'created_at';
+    const useCreatedAt = filters.filterBy === "created_at";
     const dateField = useCreatedAt ? goals.created_at : goals.end_date;
 
     // Si hay startDate, filtrar metas según el campo determinado
@@ -240,9 +245,11 @@ export class PgGoalRepository implements IGoalRepository {
           }
         : null,
       contributionFrequency: raw.contribution_frequency,
-      contributionAmount: raw.contribution_amount ? Number(raw.contribution_amount) : 0,
+      contributionAmount: raw.contribution_amount
+        ? Number(raw.contribution_amount)
+        : 0,
       createdAt: raw.created_at,
-      updatedAt: raw.updated_at
+      updatedAt: raw.updated_at,
     };
   }
 }

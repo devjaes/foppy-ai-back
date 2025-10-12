@@ -8,40 +8,79 @@ import {
   getStatusColor,
   checkPageBreak,
 } from "./pdf-utils";
-import { addSectionTitle, addMetricCard, drawProgressBar } from "./pdf-components";
+import {
+  addSectionTitle,
+  addMetricCard,
+  drawProgressBar,
+} from "./pdf-components";
 import { drawTable } from "./pdf-table";
 import { addNewPage } from "./pdf-layout";
 
-export function formatGoalsByStatus(doc: typeof PDFDocument, data: any) {
+export function formatGoalsByStatus(doc: typeof PDFDocument, data: any, reportTitle: string = "Metas por Estado") {
   if (!data || !data.goals) {
     doc.fontSize(12).fillColor(COLORS.TEXT).text("No hay datos disponibles");
     return;
   }
 
-  addSectionTitle(doc, "Resumen General");
+  addSectionTitle(doc, "Resumen General", reportTitle);
 
   const cardY = doc.y;
   const cardWidth = 110;
   const cardSpacing = 15;
 
-  addMetricCard(doc, "Total Metas", data.total?.toString() || "0", DIMENSIONS.MARGIN, cardY, cardWidth, COLORS.SECONDARY);
-  addMetricCard(doc, "Completadas", data.completed?.toString() || "0", DIMENSIONS.MARGIN + cardWidth + cardSpacing, cardY, cardWidth, COLORS.ACCENT);
-  addMetricCard(doc, "En Progreso", data.inProgress?.toString() || "0", DIMENSIONS.MARGIN + 2 * (cardWidth + cardSpacing), cardY, cardWidth, COLORS.WARNING);
-  addMetricCard(doc, "Expiradas", data.expired?.toString() || "0", DIMENSIONS.MARGIN + 3 * (cardWidth + cardSpacing), cardY, cardWidth, COLORS.DANGER);
+  addMetricCard(
+    doc,
+    "Total Metas",
+    data.total?.toString() || "0",
+    DIMENSIONS.MARGIN,
+    cardY,
+    cardWidth,
+    COLORS.SECONDARY
+  );
+  addMetricCard(
+    doc,
+    "Completadas",
+    data.completed?.toString() || "0",
+    DIMENSIONS.MARGIN + cardWidth + cardSpacing,
+    cardY,
+    cardWidth,
+    COLORS.ACCENT
+  );
+  addMetricCard(
+    doc,
+    "En Progreso",
+    data.inProgress?.toString() || "0",
+    DIMENSIONS.MARGIN + 2 * (cardWidth + cardSpacing),
+    cardY,
+    cardWidth,
+    COLORS.WARNING
+  );
+  addMetricCard(
+    doc,
+    "Expiradas",
+    data.expired?.toString() || "0",
+    DIMENSIONS.MARGIN + 3 * (cardWidth + cardSpacing),
+    cardY,
+    cardWidth,
+    COLORS.DANGER
+  );
 
   doc.y = cardY + 70;
   doc.moveDown(1);
 
-  addSectionTitle(doc, "Detalle de Metas");
+  addSectionTitle(doc, "Detalle de Metas", reportTitle);
 
   if (data.goals.length === 0) {
-    doc.fontSize(11).fillColor(COLORS.TEXT).text("No se encontraron metas para mostrar", DIMENSIONS.MARGIN, doc.y);
+    doc
+      .fontSize(11)
+      .fillColor(COLORS.TEXT)
+      .text("No se encontraron metas para mostrar", DIMENSIONS.MARGIN, doc.y);
     return;
   }
 
   data.goals.forEach((goal: any, index: number) => {
     if (checkPageBreak(doc, 120)) {
-      addNewPage(doc);
+      addNewPage(doc, reportTitle);
     }
 
     if (index > 0) {
@@ -51,13 +90,16 @@ export function formatGoalsByStatus(doc: typeof PDFDocument, data: any) {
     const statusColor = getStatusColor(goal.status);
     const statusLabel = getStatusLabel(goal.status);
 
-    doc.fontSize(13)
-       .fillColor(COLORS.PRIMARY)
-       .font("Helvetica-Bold")
-       .text(goal.name || "Sin nombre", DIMENSIONS.MARGIN, doc.y, { continued: true })
-       .fontSize(9)
-       .fillColor(statusColor)
-       .text(` [${statusLabel}]`, { continued: false });
+    doc
+      .fontSize(13)
+      .fillColor(COLORS.PRIMARY)
+      .font("Helvetica-Bold")
+      .text(goal.name || "Sin nombre", DIMENSIONS.MARGIN, doc.y, {
+        continued: true,
+      })
+      .fontSize(9)
+      .fillColor(statusColor)
+      .text(` [${statusLabel}]`, { continued: false });
 
     doc.moveDown(0.5);
 
@@ -65,17 +107,23 @@ export function formatGoalsByStatus(doc: typeof PDFDocument, data: any) {
     const col2X = DIMENSIONS.MARGIN + 250;
     const rowY = doc.y;
 
-    doc.fontSize(10)
-       .fillColor(COLORS.TEXT)
-       .font("Helvetica")
-       .text(`Meta: ${formatCurrency(goal.targetAmount || 0)}`, col1X, rowY)
-       .text(`Categoría: ${goal.categoryName || "Sin categoría"}`, col2X, rowY);
+    doc
+      .fontSize(10)
+      .fillColor(COLORS.TEXT)
+      .font("Helvetica")
+      .text(`Meta: ${formatCurrency(goal.targetAmount || 0)}`, col1X, rowY)
+      .text(`Categoría: ${goal.categoryName || "Sin categoría"}`, col2X, rowY);
 
     doc.moveDown(0.8);
     const row2Y = doc.y;
 
-    doc.text(`Ahorrado: ${formatCurrency(goal.currentAmount || 0)}`, col1X, row2Y)
-       .text(`Fecha límite: ${formatDate(goal.deadline)}`, col2X, row2Y);
+    doc
+      .text(
+        `Ahorrado: ${formatCurrency(goal.currentAmount || 0)}`,
+        col1X,
+        row2Y
+      )
+      .text(`Fecha límite: ${formatDate(goal.deadline)}`, col2X, row2Y);
 
     doc.moveDown(1);
 
@@ -85,7 +133,7 @@ export function formatGoalsByStatus(doc: typeof PDFDocument, data: any) {
   });
 }
 
-export function formatGoalsByCategory(doc: typeof PDFDocument, data: any) {
+export function formatGoalsByCategory(doc: typeof PDFDocument, data: any, reportTitle: string = "Metas por Categoría") {
   if (!data || !data.categories) {
     doc.fontSize(12).fillColor(COLORS.TEXT).text("No hay datos disponibles");
     return;
@@ -97,32 +145,52 @@ export function formatGoalsByCategory(doc: typeof PDFDocument, data: any) {
   const cardWidth = 140;
   const cardSpacing = 20;
 
-  addMetricCard(doc, "Total Categorías", data.totalCategories?.toString() || "0", DIMENSIONS.MARGIN, cardY, cardWidth, COLORS.SECONDARY);
-  addMetricCard(doc, "Total Metas", data.totalGoals?.toString() || "0", DIMENSIONS.MARGIN + cardWidth + cardSpacing, cardY, cardWidth, COLORS.PRIMARY);
+  addMetricCard(
+    doc,
+    "Total Categorías",
+    data.totalCategories?.toString() || "0",
+    DIMENSIONS.MARGIN,
+    cardY,
+    cardWidth,
+    COLORS.SECONDARY
+  );
+  addMetricCard(
+    doc,
+    "Total Metas",
+    data.totalGoals?.toString() || "0",
+    DIMENSIONS.MARGIN + cardWidth + cardSpacing,
+    cardY,
+    cardWidth,
+    COLORS.PRIMARY
+  );
 
   doc.y = cardY + 70;
   doc.moveDown(1);
 
-  addSectionTitle(doc, "Detalle por Categoría");
+  addSectionTitle(doc, "Detalle por Categoría", reportTitle);
 
   if (data.categories.length === 0) {
-    doc.fontSize(11).fillColor(COLORS.TEXT).text("No se encontraron categorías con metas", DIMENSIONS.MARGIN, doc.y);
+    doc
+      .fontSize(11)
+      .fillColor(COLORS.TEXT)
+      .text("No se encontraron categorías con metas", DIMENSIONS.MARGIN, doc.y);
     return;
   }
 
   data.categories.forEach((category: any, catIndex: number) => {
     if (checkPageBreak(doc, 200)) {
-      addNewPage(doc);
+      addNewPage(doc, reportTitle);
     }
 
     if (catIndex > 0) {
       doc.moveDown(1.5);
     }
 
-    doc.fontSize(14)
-       .fillColor(COLORS.SECONDARY)
-       .font("Helvetica-Bold")
-       .text(category.name || "Sin nombre", DIMENSIONS.MARGIN, doc.y);
+    doc
+      .fontSize(14)
+      .fillColor(COLORS.SECONDARY)
+      .font("Helvetica-Bold")
+      .text(category.name || "Sin nombre", DIMENSIONS.MARGIN, doc.y);
 
     doc.moveDown(0.5);
 
@@ -131,12 +199,21 @@ export function formatGoalsByCategory(doc: typeof PDFDocument, data: any) {
     const col3X = DIMENSIONS.MARGIN + 350;
     const statsY = doc.y;
 
-    doc.fontSize(9)
-       .fillColor(COLORS.TEXT)
-       .font("Helvetica")
-       .text(`Metas: ${category.totalGoals || 0}`, col1X, statsY)
-       .text(`Total: ${formatCurrency(category.totalAmount || 0)}`, col2X, statsY)
-       .text(`Ahorrado: ${formatCurrency(category.completedAmount || 0)}`, col3X, statsY);
+    doc
+      .fontSize(9)
+      .fillColor(COLORS.TEXT)
+      .font("Helvetica")
+      .text(`Metas: ${category.totalGoals || 0}`, col1X, statsY)
+      .text(
+        `Total: ${formatCurrency(category.totalAmount || 0)}`,
+        col2X,
+        statsY
+      )
+      .text(
+        `Ahorrado: ${formatCurrency(category.completedAmount || 0)}`,
+        col3X,
+        statsY
+      );
 
     doc.moveDown(1);
 
@@ -154,25 +231,26 @@ export function formatGoalsByCategory(doc: typeof PDFDocument, data: any) {
         getStatusLabel(goal.status || "inProgress"),
       ]);
 
-      drawTable(doc, headers, rows, [140, 80, 80, 70, 80]);
+      drawTable(doc, headers, rows, [140, 80, 80, 70, 80], reportTitle);
     }
 
     doc.moveDown(0.5);
   });
 }
 
-export function formatContributionsByGoal(doc: typeof PDFDocument, data: any) {
+export function formatContributionsByGoal(doc: typeof PDFDocument, data: any, reportTitle: string = "Contribuciones por Meta") {
   if (!data) {
     doc.fontSize(12).fillColor(COLORS.TEXT).text("No hay datos disponibles");
     return;
   }
 
-  addSectionTitle(doc, "Información de la Meta");
+  addSectionTitle(doc, "Información de la Meta", reportTitle);
 
-  doc.fontSize(14)
-     .fillColor(COLORS.PRIMARY)
-     .font("Helvetica-Bold")
-     .text(data.goalName || "Sin nombre", DIMENSIONS.MARGIN, doc.y);
+  doc
+    .fontSize(14)
+    .fillColor(COLORS.PRIMARY)
+    .font("Helvetica-Bold")
+    .text(data.goalName || "Sin nombre", DIMENSIONS.MARGIN, doc.y);
 
   doc.moveDown(1);
 
@@ -180,17 +258,44 @@ export function formatContributionsByGoal(doc: typeof PDFDocument, data: any) {
   const cardWidth = 150;
   const cardSpacing = 15;
 
-  addMetricCard(doc, "Total Contribuciones", formatCurrency(data.totalContributions || 0), DIMENSIONS.MARGIN, cardY, cardWidth, COLORS.ACCENT);
-  addMetricCard(doc, "Promedio", formatCurrency(data.averageContribution || 0), DIMENSIONS.MARGIN + cardWidth + cardSpacing, cardY, cardWidth, COLORS.SECONDARY);
-  addMetricCard(doc, "Última Contribución", data.lastContributionDate ? formatDate(data.lastContributionDate) : "N/A", DIMENSIONS.MARGIN + 2 * (cardWidth + cardSpacing), cardY, cardWidth, COLORS.PRIMARY);
+  addMetricCard(
+    doc,
+    "Total Contribuciones",
+    formatCurrency(data.totalContributions || 0),
+    DIMENSIONS.MARGIN,
+    cardY,
+    cardWidth,
+    COLORS.ACCENT
+  );
+  addMetricCard(
+    doc,
+    "Promedio",
+    formatCurrency(data.averageContribution || 0),
+    DIMENSIONS.MARGIN + cardWidth + cardSpacing,
+    cardY,
+    cardWidth,
+    COLORS.SECONDARY
+  );
+  addMetricCard(
+    doc,
+    "Última Contribución",
+    data.lastContributionDate ? formatDate(data.lastContributionDate) : "N/A",
+    DIMENSIONS.MARGIN + 2 * (cardWidth + cardSpacing),
+    cardY,
+    cardWidth,
+    COLORS.PRIMARY
+  );
 
   doc.y = cardY + 70;
   doc.moveDown(1);
 
-  addSectionTitle(doc, "Historial de Contribuciones");
+  addSectionTitle(doc, "Historial de Contribuciones", reportTitle);
 
   if (!data.contributions || data.contributions.length === 0) {
-    doc.fontSize(11).fillColor(COLORS.TEXT).text("No se encontraron contribuciones", DIMENSIONS.MARGIN, doc.y);
+    doc
+      .fontSize(11)
+      .fillColor(COLORS.TEXT)
+      .text("No se encontraron contribuciones", DIMENSIONS.MARGIN, doc.y);
     return;
   }
 
@@ -201,26 +306,34 @@ export function formatContributionsByGoal(doc: typeof PDFDocument, data: any) {
     contrib.transactionId || "N/A",
   ]);
 
-  drawTable(doc, headers, rows, [150, 150, 150]);
+  drawTable(doc, headers, rows, [150, 150, 150], reportTitle);
 }
 
-export function formatSavingsComparison(doc: typeof PDFDocument, data: any) {
+export function formatSavingsComparison(doc: typeof PDFDocument, data: any, reportTitle: string = "Comparación de Ahorro") {
   if (!data) {
     doc.fontSize(12).fillColor(COLORS.TEXT).text("No hay datos disponibles");
     return;
   }
 
-  addSectionTitle(doc, "Comparación de Ahorro");
+  addSectionTitle(doc, "Comparación de Ahorro", reportTitle);
 
-  doc.fontSize(14)
-     .fillColor(COLORS.PRIMARY)
-     .font("Helvetica-Bold")
-     .text(data.goalName || "Sin nombre", DIMENSIONS.MARGIN, doc.y);
+  doc
+    .fontSize(14)
+    .fillColor(COLORS.PRIMARY)
+    .font("Helvetica-Bold")
+    .text(data.goalName || "Sin nombre", DIMENSIONS.MARGIN, doc.y);
 
   doc.moveDown(1.5);
 
   if (!data.deviations || data.deviations.length === 0) {
-    doc.fontSize(11).fillColor(COLORS.TEXT).text("No hay datos de comparación disponibles", DIMENSIONS.MARGIN, doc.y);
+    doc
+      .fontSize(11)
+      .fillColor(COLORS.TEXT)
+      .text(
+        "No hay datos de comparación disponibles",
+        DIMENSIONS.MARGIN,
+        doc.y
+      );
     return;
   }
 
@@ -236,10 +349,10 @@ export function formatSavingsComparison(doc: typeof PDFDocument, data: any) {
     ];
   });
 
-  drawTable(doc, headers, rows, [120, 120, 120, 120]);
+  drawTable(doc, headers, rows, [120, 120, 120, 120], reportTitle);
 }
 
-export function formatSavingsSummary(doc: typeof PDFDocument, data: any) {
+export function formatSavingsSummary(doc: typeof PDFDocument, data: any, reportTitle: string = "Resumen de Ahorro") {
   if (!data) {
     doc.fontSize(12).fillColor(COLORS.TEXT).text("No hay datos disponibles");
     return;
@@ -251,36 +364,99 @@ export function formatSavingsSummary(doc: typeof PDFDocument, data: any) {
   const cardWidth = 110;
   const cardSpacing = 12;
 
-  addMetricCard(doc, "Total Metas", data.totalGoals?.toString() || "0", DIMENSIONS.MARGIN, cardY, cardWidth, COLORS.SECONDARY);
-  addMetricCard(doc, "Completadas", data.completedGoals?.toString() || "0", DIMENSIONS.MARGIN + cardWidth + cardSpacing, cardY, cardWidth, COLORS.ACCENT);
-  addMetricCard(doc, "En Progreso", data.inProgressGoals?.toString() || "0", DIMENSIONS.MARGIN + 2 * (cardWidth + cardSpacing), cardY, cardWidth, COLORS.WARNING);
-  addMetricCard(doc, "Expiradas", data.expiredGoals?.toString() || "0", DIMENSIONS.MARGIN + 3 * (cardWidth + cardSpacing), cardY, cardWidth, COLORS.DANGER);
+  addMetricCard(
+    doc,
+    "Total Metas",
+    data.totalGoals?.toString() || "0",
+    DIMENSIONS.MARGIN,
+    cardY,
+    cardWidth,
+    COLORS.SECONDARY
+  );
+  addMetricCard(
+    doc,
+    "Completadas",
+    data.completedGoals?.toString() || "0",
+    DIMENSIONS.MARGIN + cardWidth + cardSpacing,
+    cardY,
+    cardWidth,
+    COLORS.ACCENT
+  );
+  addMetricCard(
+    doc,
+    "En Progreso",
+    data.inProgressGoals?.toString() || "0",
+    DIMENSIONS.MARGIN + 2 * (cardWidth + cardSpacing),
+    cardY,
+    cardWidth,
+    COLORS.WARNING
+  );
+  addMetricCard(
+    doc,
+    "Expiradas",
+    data.expiredGoals?.toString() || "0",
+    DIMENSIONS.MARGIN + 3 * (cardWidth + cardSpacing),
+    cardY,
+    cardWidth,
+    COLORS.DANGER
+  );
 
   doc.y = cardY + 70;
   doc.moveDown(1);
 
-  addSectionTitle(doc, "Métricas Financieras");
+  addSectionTitle(doc, "Métricas Financieras", reportTitle);
 
   const metricsY = doc.y;
 
-  addMetricCard(doc, "Meta Total", formatCurrency(data.totalTargetAmount || 0), DIMENSIONS.MARGIN, metricsY, 150, COLORS.PRIMARY);
-  addMetricCard(doc, "Ahorrado Total", formatCurrency(data.totalCurrentAmount || 0), DIMENSIONS.MARGIN + 165, metricsY, 150, COLORS.ACCENT);
-  addMetricCard(doc, "Contribución Promedio", formatCurrency(data.averageContribution || 0), DIMENSIONS.MARGIN + 330, metricsY, 150, COLORS.SECONDARY);
+  addMetricCard(
+    doc,
+    "Meta Total",
+    formatCurrency(data.totalTargetAmount || 0),
+    DIMENSIONS.MARGIN,
+    metricsY,
+    150,
+    COLORS.PRIMARY
+  );
+  addMetricCard(
+    doc,
+    "Ahorrado Total",
+    formatCurrency(data.totalCurrentAmount || 0),
+    DIMENSIONS.MARGIN + 165,
+    metricsY,
+    150,
+    COLORS.ACCENT
+  );
+  addMetricCard(
+    doc,
+    "Contribución Promedio",
+    formatCurrency(data.averageContribution || 0),
+    DIMENSIONS.MARGIN + 330,
+    metricsY,
+    150,
+    COLORS.SECONDARY
+  );
 
   doc.y = metricsY + 70;
   doc.moveDown(1);
 
-  doc.fontSize(11)
-     .fillColor(COLORS.TEXT)
-     .font("Helvetica")
-     .text("Progreso General:", DIMENSIONS.MARGIN, doc.y);
-  
+  doc
+    .fontSize(11)
+    .fillColor(COLORS.TEXT)
+    .font("Helvetica")
+    .text("Progreso General:", DIMENSIONS.MARGIN, doc.y);
+
   doc.moveDown(0.5);
-  drawProgressBar(doc, DIMENSIONS.MARGIN, doc.y, 450, data.overallProgress || 0);
+  drawProgressBar(
+    doc,
+    DIMENSIONS.MARGIN,
+    doc.y,
+    450,
+    data.overallProgress || 0
+  );
   doc.moveDown(1.5);
 
   if (data.categoryBreakdown && data.categoryBreakdown.length > 0) {
-    addSectionTitle(doc, "Desglose por Categoría");
+    addSectionTitle(doc, "Desglose por Categoría", reportTitle);
 
     const headers = ["Categoría", "Metas", "Monto Total", "Progreso"];
     const rows = data.categoryBreakdown.map((cat: any) => [
@@ -290,6 +466,6 @@ export function formatSavingsSummary(doc: typeof PDFDocument, data: any) {
       `${(cat.progress || 0).toFixed(1)}%`,
     ]);
 
-    drawTable(doc, headers, rows, [180, 80, 120, 100]);
+    drawTable(doc, headers, rows, [160, 80, 120, 100], reportTitle);
   }
 }

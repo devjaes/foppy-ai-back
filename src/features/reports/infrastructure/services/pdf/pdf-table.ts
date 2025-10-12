@@ -6,14 +6,20 @@ export function drawTable(
   doc: typeof PDFDocument,
   headers: string[],
   rows: string[][],
-  columnWidths: number[]
+  columnWidths: number[],
+  reportTitle?: string
 ) {
-  const startX = DIMENSIONS.MARGIN;
+  const maxWidth = DIMENSIONS.PAGE_WIDTH - DIMENSIONS.MARGIN * 2;
   const totalWidth = columnWidths.reduce((a, b) => a + b, 0);
+  
+  const startX = totalWidth < maxWidth 
+    ? DIMENSIONS.MARGIN + (maxWidth - totalWidth) / 2 
+    : DIMENSIONS.MARGIN;
+  
   const tableHeight = TABLE.HEADER_HEIGHT + rows.length * TABLE.ROW_HEIGHT;
 
   if (checkPageBreak(doc, tableHeight)) {
-    addNewPage(doc);
+    addNewPage(doc, reportTitle);
   }
 
   let currentY = doc.y;
@@ -33,7 +39,7 @@ export function drawTable(
          currentY + TABLE.CELL_PADDING,
          {
            width: columnWidths[i] - 2 * TABLE.CELL_PADDING,
-           align: "left",
+           align: "center",
          }
        );
     x += columnWidths[i];
@@ -54,6 +60,9 @@ export function drawTable(
 
     x = startX;
     row.forEach((cell, colIndex) => {
+      const isNumeric = /^[\$\d,.-]+%?$/.test(cell) || cell === "N/A";
+      const align = isNumeric && colIndex > 0 ? "right" : "left";
+      
       doc.fontSize(9)
          .fillColor(COLORS.TEXT)
          .font("Helvetica")
@@ -63,7 +72,7 @@ export function drawTable(
            currentY + TABLE.CELL_PADDING,
            {
              width: columnWidths[colIndex] - 2 * TABLE.CELL_PADDING,
-             align: colIndex === 0 ? "left" : "right",
+             align: align,
            }
          );
       x += columnWidths[colIndex];
