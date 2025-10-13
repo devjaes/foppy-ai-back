@@ -1,8 +1,8 @@
 /**
- * Sets the end date with the last hour of the day (23:59:59.999)
+ * Sets the end date with the last millisecond of the day (23:59:59.999)
  * to ensure all transactions from the day are included
  * @param date - Base date
- * @returns New date with the last hour of the day
+ * @returns New date with the last millisecond of the day
  */
 export function setEndOfDay(date: Date): Date {
   const endOfDay = new Date(date);
