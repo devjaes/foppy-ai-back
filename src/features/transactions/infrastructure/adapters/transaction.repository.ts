@@ -380,8 +380,6 @@ export class PgTransactionRepository implements ITransactionRepository {
     const utcStartDate = setStartOfDay(startDate);
     const utcEndDate = setEndOfDay(endDate);
 
-    console.log("UTC Start date:", utcStartDate.toISOString());
-    console.log("UTC End date:", utcEndDate.toISOString());
 
     const result = await this.db
       .select({
