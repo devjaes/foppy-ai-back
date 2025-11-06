@@ -30,6 +30,25 @@ export class PgGoalRepository implements IGoalRepository {
     return result.map((row) => this.mapToEntity(row.goal, row.category));
   }
 
+  async findAllActive(): Promise<IGoal[]> {
+    const now = new Date();
+    const result = await this.db
+      .select({
+        goal: goals,
+        category: categories,
+      })
+      .from(goals)
+      .leftJoin(categories, eq(goals.category_id, categories.id))
+      .where(
+        and(
+          gte(goals.end_date, now),
+          sql`CAST(${goals.current_amount} AS DECIMAL) < CAST(${goals.target_amount} AS DECIMAL)`
+        )
+      );
+
+    return result.map((row) => this.mapToEntity(row.goal, row.category));
+  }
+
   async findAllWithLastContributionWithMoreThanOneWeekAgo(): Promise<IGoal[]> {
     const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 

@@ -29,37 +29,45 @@ export const recalculateContributionAmountCron = new CronJob(
       console.log(`Found ${goalsToUpdate.length} goals to update`);
 
       // Check all active goals for other suggestions
-      const allActiveGoals = await PgGoalRepository.getInstance().findAllActive();
-      console.log(`Found ${allActiveGoals.length} active goals to check for suggestions`);
+      const allActiveGoals =
+        await PgGoalRepository.getInstance().findAllActive();
+      console.log(
+        `Found ${allActiveGoals.length} active goals to check for suggestions`
+      );
 
       // Process all active goals for suggestions
       for (const goal of allActiveGoals) {
         // Check for goal at risk
         await goalSuggestionService.checkGoalAtRisk(goal);
-        
+
         // Check for inactivity
         await goalSuggestionService.checkInactivity(goal);
-        
+
         // Weekly saving suggestion (only for goals that haven't been updated in contribution amount)
-        if (!goalsToUpdate.some(g => g.id === goal.id)) {
+        if (!goalsToUpdate.some((g) => g.id === goal.id)) {
           await goalSuggestionService.suggestWeeklySaving(goal);
         }
-        
+
         // Optimize saving plan suggestion (run less frequently, e.g. after 5+ contributions)
-        const contributions = await PgGoalContributionRepository.getInstance().findByGoalId(goal.id);
+        const contributions =
+          await PgGoalContributionRepository.getInstance().findByGoalId(
+            goal.id
+          );
         if (contributions.length >= 5) {
           // Check if we've sent this suggestion recently (in the last 14 days)
-          const recentSuggestions = await PgNotificationRepository.getInstance().findByUserIdAndType(
-            goal.userId,
-            NotificationType.SUGGESTION,
-            new Date(Date.now() - 14 * 24 * 60 * 60 * 1000)
+          const recentSuggestions =
+            await PgNotificationRepository.getInstance().findByUserIdAndType(
+              goal.userId,
+              NotificationType.SUGGESTION,
+              new Date(Date.now() - 14 * 24 * 60 * 60 * 1000)
+            );
+
+          const hasSentOptimizationRecently = recentSuggestions.some(
+            (notification) =>
+              notification.title.includes("Optimiza tu plan de ahorro") &&
+              notification.title.includes(goal.name)
           );
-          
-          const hasSentOptimizationRecently = recentSuggestions.some(notification => 
-            notification.title.includes("Optimiza tu plan de ahorro") && 
-            notification.title.includes(goal.name)
-          );
-          
+
           if (!hasSentOptimizationRecently) {
             await goalSuggestionService.suggestOptimizedSaving(goal);
           }
@@ -87,7 +95,7 @@ export const recalculateContributionAmountCron = new CronJob(
           // Adjust for contribution frequency (e.g., 7 for weekly, 30 for monthly)
           const contributionFrequency = goal.contributionFrequency || 7; // Default to weekly if not set
           const contributionsRemaining = Math.ceil(
-            daysRemaining / contributionFrequency 
+            daysRemaining / contributionFrequency
           );
 
           if (contributionsRemaining <= 0) {
@@ -111,7 +119,13 @@ export const recalculateContributionAmountCron = new CronJob(
           await notificationUtils.createSuggestionNotification(
             goal.userId,
             `Meta: ${goal.name} - Aporte recalculado`,
-            `No has realizado aportes a tu meta "${goal.name}" en más de una semana. Tu monto de aporte sugerido ha sido recalculado a $${newContributionAmount.toFixed(2)} para que puedas alcanzar tu objetivo a tiempo. Monto restante: $${amountRemaining.toFixed(2)}.`,
+            `No has realizado aportes a tu meta "${
+              goal.name
+            }" en más de una semana. Tu monto de aporte sugerido ha sido recalculado a $${newContributionAmount.toFixed(
+              2
+            )} para que puedas alcanzar tu objetivo a tiempo. Monto restante: $${amountRemaining.toFixed(
+              2
+            )}.`,
             true // Send email
           );
 

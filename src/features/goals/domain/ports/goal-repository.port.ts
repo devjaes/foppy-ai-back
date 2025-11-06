@@ -2,6 +2,7 @@ import { IGoal } from "../entities/IGoal";
 
 export interface IGoalRepository {
 	findAll(): Promise<IGoal[]>;
+	findAllActive(): Promise<IGoal[]>;
 	findById(id: number): Promise<IGoal | null>;
 	findByUserId(userId: number): Promise<IGoal[]>;
 	findSharedWithUser(userId: number): Promise<IGoal[]>;
