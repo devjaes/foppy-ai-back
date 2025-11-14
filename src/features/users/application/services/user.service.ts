@@ -105,6 +105,25 @@ export class UserService implements IUserService {
 			active: true,
 		});
 
+		const { PgPlanRepository } = await import("@/subscriptions/infrastructure/adapters/plan.repository");
+		const { PgSubscriptionRepository } = await import("@/subscriptions/infrastructure/adapters/subscription.repository");
+		const planRepository = PgPlanRepository.getInstance();
+		const subscriptionRepository = PgSubscriptionRepository.getInstance();
+		const demoPlan = await planRepository.findByName("demo");
+		if (demoPlan) {
+			const startDate = new Date();
+			const endDate = new Date();
+			endDate.setDate(endDate.getDate() + demoPlan.durationDays);
+			await subscriptionRepository.create({
+				userId: user.id,
+				planId: demoPlan.id,
+				frequency: demoPlan.frequency,
+				startDate,
+				endDate,
+				active: true,
+			});
+		}
+
 		return c.json(
 			{
 				success: true,

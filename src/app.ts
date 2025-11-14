@@ -39,6 +39,7 @@ import { ExcelService } from "./features/reports/infrastructure/services/excel.s
 import { CSVService } from "./features/reports/infrastructure/services/csv.service";
 import reports from "./features/reports/infrastructure/controllers/report.controller";
 import aiAgents from "./features/ai-agents/infrastructure/controllers/voice-command.controller";
+import subscriptions from "./features/subscriptions/infrastructure/controllers/subscription.controller";
 
 const app = createApp();
 
@@ -112,6 +113,7 @@ const routes = [
   reports,
   aiAgents,
   notificationSocket,
+  subscriptions,
 ] as const;
 
 app.get("/debug/db-status", (c) => {
