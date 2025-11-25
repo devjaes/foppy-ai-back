@@ -8,6 +8,8 @@ const authService = AuthService.getInstance(userRepository);
 
 const router = createRouter()
 	.openapi(routes.login, authService.login)
-	.openapi(routes.register, authService.register);
+	.openapi(routes.register, authService.register)
+	.openapi(routes.forgotPassword, authService.forgotPassword)
+	.openapi(routes.resetPassword, authService.resetPassword);
 
 export default router;
