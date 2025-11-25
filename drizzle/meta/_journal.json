@@ -57,6 +57,20 @@
       "when": 1745570066019,
       "tag": "0007_acoustic_doctor_faustus",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1764072661093,
+      "tag": "0008_brown_stark_industries",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1764072927377,
+      "tag": "0009_overjoyed_dust",
+      "breakpoints": true
     }
   ]
 }
