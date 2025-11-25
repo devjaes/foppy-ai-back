@@ -5,6 +5,8 @@ import {
 	authResponseSchema,
 	loginSchema,
 	registerSchema,
+	forgotPasswordSchema,
+	resetPasswordSchema,
 } from "../../application/dtos/auth.dto";
 import { z } from "zod";
 
@@ -85,5 +87,69 @@ export const register = createRoute({
 	},
 });
 
+export const forgotPassword = createRoute({
+	path: "/auth/forgot-password",
+	method: "post",
+	tags,
+	request: {
+		body: jsonContentRequired(forgotPasswordSchema, "Forgot password request"),
+	},
+	responses: {
+		[HttpStatusCodes.OK]: {
+			content: {
+				"application/json": {
+					schema: z.object({
+						success: z.boolean(),
+						data: z.null(),
+						message: z.string(),
+					}),
+				},
+			},
+			description: "Password recovery email sent",
+		},
+		[HttpStatusCodes.NOT_FOUND]: {
+			content: {
+				"application/json": {
+					schema: errorResponseSchema,
+				},
+			},
+			description: "User not found",
+		},
+	},
+});
+
+export const resetPassword = createRoute({
+	path: "/auth/reset-password",
+	method: "post",
+	tags,
+	request: {
+		body: jsonContentRequired(resetPasswordSchema, "Reset password request"),
+	},
+	responses: {
+		[HttpStatusCodes.OK]: {
+			content: {
+				"application/json": {
+					schema: z.object({
+						success: z.boolean(),
+						data: z.null(),
+						message: z.string(),
+					}),
+				},
+			},
+			description: "Password reset successful",
+		},
+		[HttpStatusCodes.BAD_REQUEST]: {
+			content: {
+				"application/json": {
+					schema: errorResponseSchema,
+				},
+			},
+			description: "Invalid or expired token",
+		},
+	},
+});
+
 export type LoginRoute = typeof login;
 export type RegisterRoute = typeof register;
+export type ForgotPasswordRoute = typeof forgotPassword;
+export type ResetPasswordRoute = typeof resetPassword;
