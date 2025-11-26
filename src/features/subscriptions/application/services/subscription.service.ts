@@ -37,10 +37,11 @@ export class SubscriptionService {
 
   listPlans = createHandler<ListPlansRoute>(async (c) => {
     const plans = await this.planRepository.findAll();
+    const visiblePlans = plans.filter((p) => p.name !== "Plan Demo");
     return c.json(
       {
         success: true,
-        data: SubscriptionApiAdapter.planToApiResponseList(plans),
+        data: SubscriptionApiAdapter.planToApiResponseList(visiblePlans),
         message: "Plans retrieved successfully",
       },
       HttpStatusCodes.OK

@@ -387,10 +387,12 @@ export const reports = pgTable("reports", {
 
 export const plans = pgTable("plans", {
   id: serial("id").primaryKey(),
-  name: varchar("name").notNull().unique(),
+  name: varchar("name").notNull(),
   duration_days: integer("duration_days").notNull(),
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
   frequency: varchar("frequency").notNull(),
+  description: text("description"),
+  features: jsonb("features").$type<string[]>(),
   created_at: timestamp("created_at")
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),

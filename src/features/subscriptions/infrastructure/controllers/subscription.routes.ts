@@ -12,6 +12,8 @@ const planSchema = z.object({
   durationDays: z.number(),
   price: z.number(),
   frequency: z.string(),
+  description: z.string().nullable(),
+  features: z.array(z.string()).nullable(),
   createdAt: z.date(),
   updatedAt: z.date(),
 });

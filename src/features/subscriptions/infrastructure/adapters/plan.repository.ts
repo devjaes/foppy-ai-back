@@ -49,6 +49,8 @@ export class PgPlanRepository implements IPlanRepository {
       durationDays: raw.duration_days,
       price: Number(raw.price),
       frequency: raw.frequency,
+      description: raw.description,
+      features: raw.features,
       createdAt: raw.created_at,
       updatedAt: raw.updated_at,
     };

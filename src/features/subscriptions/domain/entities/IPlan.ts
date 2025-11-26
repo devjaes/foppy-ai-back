@@ -4,6 +4,8 @@ export interface IPlan {
   durationDays: number;
   price: number;
   frequency: string;
+  description: string | null;
+  features: string[] | null;
   createdAt: Date;
   updatedAt: Date;
 }

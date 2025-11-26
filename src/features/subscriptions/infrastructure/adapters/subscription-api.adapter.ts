@@ -11,7 +11,7 @@ export class SubscriptionApiAdapter {
       frequency: subscription.frequency,
       startDate: subscription.startDate,
       endDate: subscription.endDate,
-      retirementDate: subscription.retirementDate,
+      retirementDate: subscription.retirementDate || null,
       active: subscription.active,
       createdAt: subscription.createdAt,
       updatedAt: subscription.updatedAt,
@@ -25,6 +25,8 @@ export class SubscriptionApiAdapter {
       durationDays: plan.durationDays,
       price: plan.price,
       frequency: plan.frequency,
+      description: plan.description,
+      features: plan.features,
       createdAt: plan.createdAt,
       updatedAt: plan.updatedAt,
     };

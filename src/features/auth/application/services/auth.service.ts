@@ -122,7 +122,7 @@ export class AuthService {
 		// Asignar plan demo
 		const planRepository = PgPlanRepository.getInstance();
 		const subscriptionRepository = PgSubscriptionRepository.getInstance();
-		const demoPlan = await planRepository.findByName("demo");
+		const demoPlan = await planRepository.findByName("Plan Demo");
 		if (demoPlan) {
 			const startDate = new Date();
 			const endDate = new Date();
