@@ -11,6 +11,8 @@ import { generateToken } from "@/shared/utils/jwt.util";
 import { EmailService } from "@/email/application/services/email.service";
 import * as HttpStatusCodes from "stoker/http-status-codes";
 import { randomBytes } from "crypto";
+import { PgSubscriptionRepository } from "@/subscriptions/infrastructure/adapters/subscription.repository";
+import { PgPlanRepository } from "@/subscriptions/infrastructure/adapters/plan.repository";
 
 export class AuthService {
 	private static instance: AuthService;
@@ -116,6 +118,24 @@ export class AuthService {
 			passwordHash,
 			active: true,
 		});
+
+		// Asignar plan demo
+		const planRepository = PgPlanRepository.getInstance();
+		const subscriptionRepository = PgSubscriptionRepository.getInstance();
+		const demoPlan = await planRepository.findByName("Plan Demo");
+		if (demoPlan) {
+			const startDate = new Date();
+			const endDate = new Date();
+			endDate.setDate(endDate.getDate() + demoPlan.durationDays);
+			await subscriptionRepository.create({
+				userId: user.id,
+				planId: demoPlan.id,
+				frequency: demoPlan.frequency,
+				startDate,
+				endDate,
+				active: true,
+			});
+		}
 
 		// Generar token
 		const token = await generateToken({

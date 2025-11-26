@@ -58,6 +58,9 @@
 			],
 			"@/notifications/*": [
 				"./src/features/notifications/*"
+			],
+			"@/subscriptions/*": [
+				"./src/features/subscriptions/*"
 			]
 		}
 	}
