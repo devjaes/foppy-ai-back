@@ -6,8 +6,15 @@ import * as HttpStatusCodes from 'stoker/http-status-codes';
 import { hash } from '@/shared/utils/crypto.util';
 import { PgPlanRepository } from '@/subscriptions/infrastructure/adapters/plan.repository';
 import { PgSubscriptionRepository } from '@/subscriptions/infrastructure/adapters/subscription.repository';
+import { UserApiAdapter } from '@/users/infrastructure/adapters/user-api.adapter';
 
 // Mocks
+vi.mock('@/users/infrastructure/adapters/user-api.adapter', () => ({
+  UserApiAdapter: {
+    toApiResponseList: vi.fn((data) => data),
+    toApiResponse: vi.fn((data) => data),
+  },
+}));
 vi.mock('@/shared/utils/crypto.util', () => ({
   hash: vi.fn(),
 }));
@@ -149,6 +156,117 @@ describe('UserService', () => {
         HttpStatusCodes.CREATED
       );
       expect(subscriptionRepositoryMock.create).toHaveBeenCalled();
+    });
+  });
+  describe('update', () => {
+    it('should return 404 if user not found', async () => {
+      (userRepositoryMock.findById as any).mockResolvedValue(null);
+      const c = {
+        req: { param: vi.fn().mockReturnValue('1'), valid: vi.fn().mockReturnValue({}) },
+        json: vi.fn(),
+      };
+
+      await userService.update(c as any);
+
+      expect(c.json).toHaveBeenCalledWith(
+        expect.objectContaining({ success: false, message: 'User not found' }),
+        HttpStatusCodes.NOT_FOUND
+      );
+    });
+
+    it('should update user successfully', async () => {
+      const existingUser = { id: 1, email: 'test@example.com', username: 'test' };
+      (userRepositoryMock.findById as any).mockResolvedValue(existingUser);
+      const updateData = { name: 'New Name' };
+      const updatedUser = { ...existingUser, ...updateData };
+      (userRepositoryMock.update as any).mockResolvedValue(updatedUser);
+      
+      const c = {
+        req: { param: vi.fn().mockReturnValue('1'), valid: vi.fn().mockReturnValue(updateData) },
+        json: vi.fn(),
+      };
+
+      await userService.update(c as any);
+
+      expect(c.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          data: expect.objectContaining({ name: 'New Name' }),
+        }),
+        HttpStatusCodes.OK
+      );
+    });
+  });
+
+  describe('delete', () => {
+    it('should return 404 if user not found', async () => {
+      (userRepositoryMock.findById as any).mockResolvedValue(null);
+      const c = {
+        req: { param: vi.fn().mockReturnValue('1') },
+        json: vi.fn(),
+      };
+
+      await userService.delete(c as any);
+
+      expect(c.json).toHaveBeenCalledWith(
+        expect.objectContaining({ success: false, message: 'User not found' }),
+        HttpStatusCodes.NOT_FOUND
+      );
+    });
+
+    it('should delete user successfully', async () => {
+      (userRepositoryMock.findById as any).mockResolvedValue({ id: 1 });
+      (userRepositoryMock.delete as any).mockResolvedValue(true);
+      const c = {
+        req: { param: vi.fn().mockReturnValue('1') },
+        json: vi.fn(),
+      };
+
+      await userService.delete(c as any);
+
+      expect(c.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          data: { deleted: true },
+        }),
+        HttpStatusCodes.OK
+      );
+    });
+  });
+
+  describe('getById', () => {
+    it('should return 404 if user not found', async () => {
+      (userRepositoryMock.findById as any).mockResolvedValue(null);
+      const c = {
+        req: { param: vi.fn().mockReturnValue('1') },
+        json: vi.fn(),
+      };
+
+      await userService.getById(c as any);
+
+      expect(c.json).toHaveBeenCalledWith(
+        expect.objectContaining({ success: false, message: 'User not found' }),
+        HttpStatusCodes.NOT_FOUND
+      );
+    });
+
+    it('should return user if found', async () => {
+      const user = { id: 1, email: 'test@example.com' };
+      (userRepositoryMock.findById as any).mockResolvedValue(user);
+      const c = {
+        req: { param: vi.fn().mockReturnValue('1') },
+        json: vi.fn(),
+      };
+
+      await userService.getById(c as any);
+
+      expect(c.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          data: expect.objectContaining({ email: 'test@example.com' }),
+        }),
+        HttpStatusCodes.OK
+      );
     });
   });
 });
