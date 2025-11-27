@@ -8,6 +8,9 @@
 		"target": "esnext",
 		"module": "esnext",
 		"paths": {
+			"@/*": [
+				"./src/*"
+			],
 			"@/env": [
 				"./src/core/infrastructure/env/env.ts"
 			],

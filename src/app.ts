@@ -24,6 +24,7 @@ import { startBudgetSummaryJob } from "./core/infrastructure/cron/budget-notific
 import { startGoalNotificationsJob } from "./core/infrastructure/cron/goal-notifications.cron";
 import { startFinancialSuggestionsJob } from "./core/infrastructure/cron/financial-suggestions.cron";
 import { startGoalSuggestionsJob } from "./core/infrastructure/cron/goal-suggestions.cron";
+import { startDailyRecommendationsJob } from "./core/infrastructure/cron/daily-recommendations.cron";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { createMiddleware } from "hono/factory";
@@ -39,6 +40,7 @@ import { ExcelService } from "./features/reports/infrastructure/services/excel.s
 import { CSVService } from "./features/reports/infrastructure/services/csv.service";
 import reports from "./features/reports/infrastructure/controllers/report.controller";
 import aiAgents from "./features/ai-agents/infrastructure/controllers/voice-command.controller";
+import recommendations from "./features/recommendations/infrastructure/controllers/recommendation.controller";
 
 const app = createApp();
 
@@ -51,6 +53,7 @@ startBudgetSummaryJob();
 startGoalNotificationsJob();
 startFinancialSuggestionsJob();
 startGoalSuggestionsJob();
+startDailyRecommendationsJob();
 configureOpenAPI(app);
 
 // Configuración CORS mejorada
@@ -111,6 +114,7 @@ const routes = [
   email,
   reports,
   aiAgents,
+  recommendations,
   notificationSocket,
 ] as const;
 

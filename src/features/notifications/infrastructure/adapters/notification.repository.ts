@@ -1,7 +1,10 @@
 import { eq, and, lt } from "drizzle-orm";
 import DatabaseConnection from "@/core/infrastructure/database";
 import { notifications } from "@/schema";
-import { INotification, NotificationType } from "../../domain/entities/INotification";
+import {
+  INotification,
+  NotificationType,
+} from "../../domain/entities/INotification";
 import { INotificationRepository } from "../../domain/ports/notification-repository.port";
 
 export class PgNotificationRepository implements INotificationRepository {
@@ -45,16 +48,18 @@ export class PgNotificationRepository implements INotificationRepository {
       .select()
       .from(notifications)
       .where(
-        and(
-          eq(notifications.user_id, userId),
-          eq(notifications.read, false)
-        )
+        and(eq(notifications.user_id, userId), eq(notifications.read, false))
       );
 
     return result.map(this.mapToEntity);
   }
 
-  async create(notificationData: Omit<INotification, "id" | "createdAt">): Promise<INotification> {
+  async create(
+    notificationData: Omit<
+      INotification,
+      "id" | "createdAt" | "updatedAt" | "read"
+    >
+  ): Promise<INotification> {
     const result = await this.db
       .insert(notifications)
       .values({
@@ -62,7 +67,7 @@ export class PgNotificationRepository implements INotificationRepository {
         title: notificationData.title,
         subtitle: notificationData.subtitle || null,
         message: notificationData.message,
-        read: notificationData.read,
+        read: false,
         type: notificationData.type,
         expires_at: notificationData.expiresAt || null,
       })
@@ -71,15 +76,24 @@ export class PgNotificationRepository implements INotificationRepository {
     return this.mapToEntity(result[0]);
   }
 
-  async update(id: number, notificationData: Partial<INotification>): Promise<INotification> {
+  async update(
+    id: number,
+    notificationData: Partial<INotification>
+  ): Promise<INotification> {
     const updateData: Record<string, any> = {};
 
-    if (notificationData.title !== undefined) updateData.title = notificationData.title;
-    if (notificationData.subtitle !== undefined) updateData.subtitle = notificationData.subtitle;
-    if (notificationData.message !== undefined) updateData.message = notificationData.message;
-    if (notificationData.read !== undefined) updateData.read = notificationData.read;
-    if (notificationData.type !== undefined) updateData.type = notificationData.type;
-    if (notificationData.expiresAt !== undefined) updateData.expires_at = notificationData.expiresAt;
+    if (notificationData.title !== undefined)
+      updateData.title = notificationData.title;
+    if (notificationData.subtitle !== undefined)
+      updateData.subtitle = notificationData.subtitle;
+    if (notificationData.message !== undefined)
+      updateData.message = notificationData.message;
+    if (notificationData.read !== undefined)
+      updateData.read = notificationData.read;
+    if (notificationData.type !== undefined)
+      updateData.type = notificationData.type;
+    if (notificationData.expiresAt !== undefined)
+      updateData.expires_at = notificationData.expiresAt;
 
     const result = await this.db
       .update(notifications)
@@ -114,10 +128,7 @@ export class PgNotificationRepository implements INotificationRepository {
       .update(notifications)
       .set({ read: true })
       .where(
-        and(
-          eq(notifications.user_id, userId),
-          eq(notifications.read, false)
-        )
+        and(eq(notifications.user_id, userId), eq(notifications.read, false))
       )
       .returning();
 
@@ -128,16 +139,12 @@ export class PgNotificationRepository implements INotificationRepository {
     const now = new Date();
     const result = await this.db
       .delete(notifications)
-      .where(
-        and(
-          lt(notifications.expires_at, now)
-        )
-      )
+      .where(and(lt(notifications.expires_at, now)))
       .returning();
 
     return result.length;
   }
-  
+
   async findByUserIdAndType(
     userId: number,
     type: NotificationType,
@@ -147,18 +154,12 @@ export class PgNotificationRepository implements INotificationRepository {
       eq(notifications.user_id, userId),
       eq(notifications.type, type)
     );
-    
+
     if (afterDate) {
-      conditions = and(
-        conditions,
-        lt(notifications.created_at, afterDate)
-      );
+      conditions = and(conditions, lt(notifications.created_at, afterDate));
     }
-    
-    const result = await this.db
-      .select()
-      .from(notifications)
-      .where(conditions);
+
+    const result = await this.db.select().from(notifications).where(conditions);
 
     return result.map(this.mapToEntity);
   }
