@@ -8,6 +8,9 @@
 		"target": "esnext",
 		"module": "esnext",
 		"paths": {
+			"@/*": [
+				"./src/*"
+			],
 			"@/env": [
 				"./src/core/infrastructure/env/env.ts"
 			],
@@ -58,6 +61,9 @@
 			],
 			"@/notifications/*": [
 				"./src/features/notifications/*"
+			],
+			"@/subscriptions/*": [
+				"./src/features/subscriptions/*"
 			]
 		}
 	}

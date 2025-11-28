@@ -9,3 +9,9 @@ export interface MonthlyTrendData {
 	income: number;
 	expense: number;
 }
+
+export interface CategoryTotalData {
+	categoryId: number;
+	categoryName: string | null;
+	total: number;
+}

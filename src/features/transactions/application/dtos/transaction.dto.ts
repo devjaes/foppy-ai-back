@@ -58,8 +58,8 @@ export const updateTransactionSchema = transactionBaseSchema
   });
 
 export const transactionFiltersSchema = z.object({
-  startDate: z.string().datetime().optional(),
-  endDate: z.string().datetime().optional(),
+  startDate: z.string().date().optional(),
+  endDate: z.string().date().optional(),
   type: z.enum(["INCOME", "EXPENSE"]).optional(),
   category_id: z.coerce.number().int().positive().optional(),
   payment_method_id: z.coerce.number().int().positive().optional(),

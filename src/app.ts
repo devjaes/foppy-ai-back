@@ -24,6 +24,7 @@ import { startBudgetSummaryJob } from "./core/infrastructure/cron/budget-notific
 import { startGoalNotificationsJob } from "./core/infrastructure/cron/goal-notifications.cron";
 import { startFinancialSuggestionsJob } from "./core/infrastructure/cron/financial-suggestions.cron";
 import { startGoalSuggestionsJob } from "./core/infrastructure/cron/goal-suggestions.cron";
+import { startDailyRecommendationsJob } from "./core/infrastructure/cron/daily-recommendations.cron";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { createMiddleware } from "hono/factory";
@@ -39,6 +40,8 @@ import { ExcelService } from "./features/reports/infrastructure/services/excel.s
 import { CSVService } from "./features/reports/infrastructure/services/csv.service";
 import reports from "./features/reports/infrastructure/controllers/report.controller";
 import aiAgents from "./features/ai-agents/infrastructure/controllers/voice-command.controller";
+import subscriptions from "./features/subscriptions/infrastructure/controllers/subscription.controller";
+import recommendations from "./features/recommendations/infrastructure/controllers/recommendation.controller";
 
 const app = createApp();
 
@@ -51,16 +54,23 @@ startBudgetSummaryJob();
 startGoalNotificationsJob();
 startFinancialSuggestionsJob();
 startGoalSuggestionsJob();
+startDailyRecommendationsJob();
 configureOpenAPI(app);
 
 // Configuración CORS mejorada
 app.use(
   cors({
-    origin: ['http://localhost:3001', 'http://localhost:3000', '*'],
-    allowHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization'],
-    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    origin: ["http://localhost:3001", "http://localhost:3000", "*"],
+    allowHeaders: [
+      "Origin",
+      "X-Requested-With",
+      "Content-Type",
+      "Accept",
+      "Authorization",
+    ],
+    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     credentials: true,
-    exposeHeaders: ['Content-Length', 'X-Kuma-Revision']
+    exposeHeaders: ["Content-Length", "X-Kuma-Revision"],
   })
 );
 
@@ -111,7 +121,9 @@ const routes = [
   email,
   reports,
   aiAgents,
+  recommendations,
   notificationSocket,
+  subscriptions,
 ] as const;
 
 app.get("/debug/db-status", (c) => {
