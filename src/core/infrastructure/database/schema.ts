@@ -420,3 +420,52 @@ export const recommendations = pgTable(
     };
   }
 );
+
+export const plans = pgTable("plans", {
+  id: serial("id").primaryKey(),
+  name: varchar("name").notNull(),
+  duration_days: integer("duration_days").notNull(),
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  frequency: varchar("frequency").notNull(),
+  description: text("description"),
+  features: jsonb("features").$type<string[]>(),
+  created_at: timestamp("created_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+  updated_at: timestamp("updated_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+});
+
+export const subscriptions = pgTable(
+  "subscriptions",
+  {
+    id: serial("id").primaryKey(),
+    user_id: integer("user_id")
+      .references(() => users.id)
+      .notNull(),
+    plan_id: integer("plan_id")
+      .references(() => plans.id)
+      .notNull(),
+    frequency: varchar("frequency").notNull(),
+    start_date: timestamp("start_date")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    end_date: timestamp("end_date").notNull(),
+    retirement_date: timestamp("retirement_date"),
+    active: boolean("active").default(true).notNull(),
+    created_at: timestamp("created_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updated_at: timestamp("updated_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => {
+    return {
+      user_idx: index("sub_user_idx").on(table.user_id),
+      plan_idx: index("sub_plan_idx").on(table.plan_id),
+      active_idx: index("sub_active_idx").on(table.active),
+    };
+  }
+);

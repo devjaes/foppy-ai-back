@@ -1,6 +1,6 @@
 {
-  "id": "fe141e79-c873-4a0c-8c00-d6d977b1e32c",
-  "prevId": "0af304cf-d2cb-4241-afc6-947d48b98414",
+  "id": "3a64d546-50f6-46eb-a64d-57fc4127847e",
+  "prevId": "34b504b0-ea8a-419f-b0b7-d05b982cbae9",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1243,6 +1243,18 @@
           "primaryKey": false,
           "notNull": true
         },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "features": {
+          "name": "features",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -1261,15 +1273,7 @@
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "plans_name_unique": {
-          "name": "plans_name_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "name"
-          ]
-        }
-      },
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -1952,13 +1956,6 @@
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false
-        },
-        "recommendations_enabled": {
-          "name": "recommendations_enabled",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
         },
         "created_at": {
           "name": "created_at",

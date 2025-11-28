@@ -40,6 +40,7 @@ import { ExcelService } from "./features/reports/infrastructure/services/excel.s
 import { CSVService } from "./features/reports/infrastructure/services/csv.service";
 import reports from "./features/reports/infrastructure/controllers/report.controller";
 import aiAgents from "./features/ai-agents/infrastructure/controllers/voice-command.controller";
+import subscriptions from "./features/subscriptions/infrastructure/controllers/subscription.controller";
 import recommendations from "./features/recommendations/infrastructure/controllers/recommendation.controller";
 
 const app = createApp();
@@ -59,11 +60,17 @@ configureOpenAPI(app);
 // Configuración CORS mejorada
 app.use(
   cors({
-    origin: ['http://localhost:3001', 'http://localhost:3000', '*'],
-    allowHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization'],
-    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    origin: ["http://localhost:3001", "http://localhost:3000", "*"],
+    allowHeaders: [
+      "Origin",
+      "X-Requested-With",
+      "Content-Type",
+      "Accept",
+      "Authorization",
+    ],
+    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     credentials: true,
-    exposeHeaders: ['Content-Length', 'X-Kuma-Revision']
+    exposeHeaders: ["Content-Length", "X-Kuma-Revision"],
   })
 );
 
@@ -116,6 +123,7 @@ const routes = [
   aiAgents,
   recommendations,
   notificationSocket,
+  subscriptions,
 ] as const;
 
 app.get("/debug/db-status", (c) => {
