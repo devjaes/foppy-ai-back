@@ -32,3 +32,4 @@ export const mockLLMService = {
     return "Mock transcription";
   },
 };
+
