@@ -9,7 +9,7 @@ const recommendationRepository = PgRecommendationRepository.getInstance();
 
 const getPendingHandler = async (c: Context) => {
   try {
-    const userId = c.get("userId");
+    const userId = c.req.query("userId")?.toString();
 
     if (!userId) {
       return c.json(
@@ -22,8 +22,9 @@ const getPendingHandler = async (c: Context) => {
       );
     }
 
-    const recommendations =
-      await recommendationRepository.findPendingByUserId(userId);
+    const recommendations = await recommendationRepository.findPendingByUserId(
+      Number(userId)
+    );
 
     return c.json(
       {
