@@ -26,6 +26,9 @@ export const users = pgTable("users", {
   active: boolean("active").default(true).notNull(),
   recovery_token: varchar("recovery_token"),
   recovery_token_expires: timestamp("recovery_token_expires"),
+  recommendations_enabled: boolean("recommendations_enabled")
+    .default(false)
+    .notNull(),
   created_at: timestamp("created_at")
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
@@ -384,6 +387,39 @@ export const reports = pgTable("reports", {
     .notNull(),
   expires_at: timestamp("expires_at").notNull(),
 });
+
+export const recommendations = pgTable(
+  "recommendations",
+  {
+    id: serial("id").primaryKey(),
+    user_id: integer("user_id")
+      .references(() => users.id)
+      .notNull(),
+    type: varchar("type", { length: 50 }).notNull(),
+    priority: varchar("priority", { length: 20 }).notNull(),
+    title: varchar("title", { length: 255 }).notNull(),
+    description: text("description").notNull(),
+    data: jsonb("data"),
+    actionable: boolean("actionable").default(false).notNull(),
+    actions: jsonb("actions"),
+    status: varchar("status", { length: 20 }).default("PENDING").notNull(),
+    created_at: timestamp("created_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    expires_at: timestamp("expires_at"),
+    viewed_at: timestamp("viewed_at"),
+    dismissed_at: timestamp("dismissed_at"),
+    acted_at: timestamp("acted_at"),
+  },
+  (table) => {
+    return {
+      user_idx: index("rec_user_idx").on(table.user_id),
+      status_idx: index("rec_status_idx").on(table.status),
+      type_idx: index("rec_type_idx").on(table.type),
+      created_idx: index("rec_created_idx").on(table.created_at),
+    };
+  }
+);
 
 export const plans = pgTable("plans", {
   id: serial("id").primaryKey(),

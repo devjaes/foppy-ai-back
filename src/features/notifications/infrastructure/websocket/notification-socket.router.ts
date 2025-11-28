@@ -8,7 +8,8 @@ const router = createRouter();
 const notificationSocketService = NotificationSocketService.getInstance();
 
 // WebSocket endpoint for notifications
-router.get('/notifications/ws', notificationSocketService.createWebSocketMiddleware());
+const { upgrade } = notificationSocketService.createWebSocketMiddleware();
+router.get('/notifications/ws', upgrade);
 
 // Endpoint to get WebSocket connection statistics (for monitoring/debugging)
 router.openapi(openapi.wsStats, async (c) => {

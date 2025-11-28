@@ -1,8 +1,19 @@
 import { Hono } from "hono";
-import { createBunWebSocket } from "hono/bun";
 import { verifyToken } from "@/shared/utils/jwt.util";
 import { INotification } from "../../domain/entities/INotification";
 import { NotificationApiAdapter } from "../adapters/notification-api.adapter";
+type CreateBunWebSocket = typeof import("hono/bun").createBunWebSocket;
+
+const isBunRuntime =
+  typeof (globalThis as any).Bun !== "undefined" &&
+  typeof (globalThis as any).Bun?.serve === "function";
+
+let createBunWebSocketFn: CreateBunWebSocket | null = null;
+
+if (isBunRuntime) {
+  const bunModule = await import("hono/bun");
+  createBunWebSocketFn = bunModule.createBunWebSocket;
+}
 
 /**
  * Service for managing WebSocket connections for real-time notifications
@@ -24,8 +35,24 @@ export class NotificationSocketService {
   /**
    * Create WebSocket middleware for Hono with Bun
    */
-  public createWebSocketMiddleware(): any {
-    const { upgradeWebSocket, websocket } = createBunWebSocket();
+  public createWebSocketMiddleware(): {
+    upgrade: any;
+    websocket?: any;
+  } {
+    if (!createBunWebSocketFn) {
+      const fallback = (c: any) =>
+        c.json(
+          {
+            success: false,
+            message:
+              "WebSocket no disponible en este entorno (requiere runtime Bun)",
+          },
+          501
+        );
+      return { upgrade: fallback };
+    }
+
+    const { upgradeWebSocket, websocket } = createBunWebSocketFn();
 
     // Using bind to preserve 'this' context in the callback
     const upgrade = upgradeWebSocket((c) => {
