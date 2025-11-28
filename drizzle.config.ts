@@ -33,6 +33,16 @@ if (process.env.DATABASE_URL) {
   }
 }
 
+const isTestEnv = process.env.NODE_ENV === "test";
+const connectionString =
+  (isTestEnv && process.env.TEST_DATABASE_URL) || env.DATABASE_URL;
+
+if (isTestEnv && !process.env.TEST_DATABASE_URL) {
+  console.warn(
+    "⚠️  TEST_DATABASE_URL no está configurado. Usando DATABASE_URL por defecto."
+  );
+}
+
 export default {
   schema: "./src/core/infrastructure/database/schema.ts",
   out: "./drizzle",
