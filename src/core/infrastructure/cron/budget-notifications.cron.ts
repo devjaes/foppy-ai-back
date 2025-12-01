@@ -1,9 +1,48 @@
+import { CronJob } from 'cron';
 import { PgBudgetRepository } from '@/budgets/infrastructure/adapters/budget.repository';
 import { PgCategoryRepository } from '@/categories/infrastructure/adapters/category.repository';
 import { PgNotificationRepository } from '@/notifications/infrastructure/adapters/notification.repository';
 import { NotificationUtilsService } from '@/notifications/application/services/notification-utils.service';
+import { NotificationType } from '@/notifications/domain/entities/INotification';
 
 let isRunning = false;
+
+// Cache to track sent notifications and prevent duplicates
+const sentNotificationsCache = new Map<string, Date>();
+
+/**
+ * Check if a notification was sent recently to prevent duplicates
+ * @param cacheKey Unique key for the notification
+ * @returns True if notification was sent recently
+ */
+function hasRecentNotification(cacheKey: string): boolean {
+  const lastSent = sentNotificationsCache.get(cacheKey);
+  if (!lastSent) return false;
+
+  const hoursSinceLastNotification = (Date.now() - lastSent.getTime()) / (1000 * 60 * 60);
+  return hoursSinceLastNotification < 24; // Don't send more than once per day
+}
+
+/**
+ * Record that a notification was sent
+ * @param cacheKey Unique key for the notification
+ */
+function recordNotificationSent(cacheKey: string): void {
+  sentNotificationsCache.set(cacheKey, new Date());
+}
+
+/**
+ * Get the name of a month in Spanish
+ * @param monthIndex Month index (0-11)
+ * @returns Month name in Spanish
+ */
+function getMonthName(monthIndex: number): string {
+  const months = [
+    'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+    'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+  ];
+  return months[monthIndex];
+}
 
 /**
  * Check budgets for monthly summary and generate notifications
@@ -40,6 +79,31 @@ const generateBudgetSummaries = async () => {
     
     // Generate summary notifications for each user
     for (const [userId, userBudgetList] of userBudgets.entries()) {
+      // Check if notification was already sent for this user and month
+      const monthKey = `${userId}_${now.getFullYear()}_${now.getMonth()}`;
+      const cacheKey = `BUDGET_SUMMARY_${monthKey}`;
+      
+      // Check in-memory cache first
+      if (hasRecentNotification(cacheKey)) {
+        console.log(`Skipping budget summary for user ${userId} - already sent this month (cache)`);
+        continue;
+      }
+      
+      // Check in database for existing notifications in the last 25 days
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const existingNotifications = await notificationRepository.findRecentByUserTypeAndTitle(
+        userId,
+        NotificationType.SUGGESTION,
+        `Resumen mensual de presupuestos: ${getMonthName(now.getMonth())}`,
+        startOfMonth
+      );
+      
+      if (existingNotifications.length > 0) {
+        console.log(`Skipping budget summary for user ${userId} - already sent this month (database)`);
+        recordNotificationSent(cacheKey);
+        continue;
+      }
+      
       const overBudgetItems = [];
       const nearLimitItems = [];
       const underBudgetItems = [];
@@ -111,6 +175,8 @@ const generateBudgetSummaries = async () => {
         true // Send email
       );
       
+      // Record that notification was sent
+      recordNotificationSent(cacheKey);
       notificationsCreated++;
     }
     
@@ -123,45 +189,32 @@ const generateBudgetSummaries = async () => {
 };
 
 /**
+ * Cron job for monthly budget summaries
+ * Runs on the 28th of each month at 6 PM
+ * (Using 28th instead of last day to avoid date calculation issues)
+ */
+const budgetSummaryJob = new CronJob(
+  '0 18 28 * *', // At 6:00 PM on day 28 of every month
+  async () => {
+    await generateBudgetSummaries();
+  },
+  null,
+  false,
+  'America/New_York'
+);
+
+/**
  * Start the budget summary notifications job
  */
 export const startBudgetSummaryJob = () => {
-  // Run on the last day of each month at 6 PM
-  const scheduleCheck = () => {
-    const now = new Date();
-    
-    // Last day of current month
-    const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    lastDayOfMonth.setHours(18, 0, 0, 0); // 6 PM
-    
-    // If it's already past 6 PM on the last day, schedule for next month
-    if (now > lastDayOfMonth) {
-      lastDayOfMonth.setMonth(lastDayOfMonth.getMonth() + 1);
-    }
-    
-    const delay = lastDayOfMonth.getTime() - now.getTime();
-    console.log(`Scheduled budget summary notifications for ${lastDayOfMonth.toISOString()}`);
-    
-    setTimeout(() => {
-      generateBudgetSummaries().then(() => {
-        scheduleCheck(); // Reschedule for the next month
-      });
-    }, delay);
-  };
-  
-  // Schedule recurring checks
-  scheduleCheck();
+  budgetSummaryJob.start();
+  console.log('Budget summary job started (runs at 6 PM on the 28th of each month)');
 };
 
 /**
- * Get the name of a month in Spanish
- * @param monthIndex Month index (0-11)
- * @returns Month name in Spanish
+ * Stop the budget summary notifications job
  */
-function getMonthName(monthIndex: number): string {
-  const months = [
-    'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-    'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
-  ];
-  return months[monthIndex];
-}
+export const stopBudgetSummaryJob = () => {
+  budgetSummaryJob.stop();
+  console.log('Budget summary job stopped');
+};

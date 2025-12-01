@@ -1,4 +1,4 @@
-import { INotification } from "../entities/INotification";
+import { INotification, NotificationType } from "../entities/INotification";
 
 export interface INotificationRepository {
   findAll(): Promise<INotification[]>;
@@ -11,4 +11,10 @@ export interface INotificationRepository {
   markAsRead(id: number): Promise<INotification>;
   markAllAsRead(userId: number): Promise<boolean>;
   deleteExpired(): Promise<number>;
+  findRecentByUserTypeAndTitle(
+    userId: number,
+    type: NotificationType,
+    titlePattern: string,
+    afterDate: Date
+  ): Promise<INotification[]>;
 }

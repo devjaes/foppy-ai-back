@@ -1,3 +1,5 @@
+import env from '@/env';
+
 export const baseTemplate = (title: string, subtitle: string | null, message: string, type: string) => {
   const typeColor = {
     GOAL: '#4CAF50',
@@ -8,6 +10,7 @@ export const baseTemplate = (title: string, subtitle: string | null, message: st
   };
 
   const color = typeColor[type as keyof typeof typeColor] || '#757575';
+  const frontendUrl = env.FRONTEND_URL || 'http://localhost:3001';
 
   return `
   <!DOCTYPE html>
@@ -74,7 +77,7 @@ export const baseTemplate = (title: string, subtitle: string | null, message: st
         </div>
         <div class="content">
           <p>${message.replace(/\n/g, '<br>')}</p>
-          <a href="#" class="button">Ver en la aplicación</a>
+          <a href="${frontendUrl}/management" class="button">Ver en la aplicación</a>
         </div>
         <div class="footer">
           <p>Fopymes - Tu aplicación de finanzas personales</p>
