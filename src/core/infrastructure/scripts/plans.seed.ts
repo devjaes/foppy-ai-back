@@ -33,7 +33,6 @@ async function seedPlans() {
           "Entrada de voz",
           "Acceso ilimitado a IA",
           "Soporte básico",
-          "Acceso a la app móvil",
           "Informes exportables"
         ]
       },
@@ -47,7 +46,6 @@ async function seedPlans() {
           "Entrada de voz",
           "Acceso ilimitado a IA",
           "Soporte básico",
-          "Acceso a la app móvil",
           "Informes exportables"
         ]
       },
