@@ -104,8 +104,13 @@ export class GoalOptimizationService implements IAnalysisService {
     );
 
     if (userGoals.length === 0) {
+      console.log(`[GoalOptimization] User ${userId}: No active goals found`);
       return null;
     }
+
+    console.log(
+      `[GoalOptimization] User ${userId}: Analyzing ${userGoals.length} active goal(s)`
+    );
 
     const goalAnalyses: GoalAnalysis[] = [];
 
@@ -160,20 +165,41 @@ export class GoalOptimizationService implements IAnalysisService {
     }
 
     if (goalAnalyses.length === 0) {
+      console.log(
+        `[GoalOptimization] User ${userId}: No unrealistic goals found (all goals have realismRatio <= ${this.UNREALISTIC_THRESHOLD})`
+      );
       return null;
     }
 
     goalAnalyses.sort((a, b) => b.realismRatio - a.realismRatio);
 
+    console.log(
+      `[GoalOptimization] User ${userId}: Found unrealistic goal "${
+        goalAnalyses[0].goal.name
+      }" (realismRatio: ${goalAnalyses[0].realismRatio.toFixed(2)})`
+    );
+
     return goalAnalyses[0];
   }
 
-  private async getAISuggestion(
-    analysis: GoalAnalysis
-  ): Promise<{ suggestion: "extend" | "reduce"; newValue: number; reasoning: string }> {
-    const prompt = `La meta "${analysis.goal.name}" del usuario requiere ahorrar $${analysis.dailyRequiredContribution.toFixed(2)}/día durante los próximos ${analysis.daysRemaining} días para alcanzar $${analysis.amountRemaining.toFixed(2)} faltantes.
+  private async getAISuggestion(analysis: GoalAnalysis): Promise<{
+    suggestion: "extend" | "reduce";
+    newValue: number;
+    reasoning: string;
+  }> {
+    const prompt = `La meta "${
+      analysis.goal.name
+    }" del usuario requiere ahorrar $${analysis.dailyRequiredContribution.toFixed(
+      2
+    )}/día durante los próximos ${
+      analysis.daysRemaining
+    } días para alcanzar $${analysis.amountRemaining.toFixed(2)} faltantes.
 
-Su contribución promedio histórica es de $${analysis.averageContribution.toFixed(2)}/día, lo cual hace esta meta ${Math.round(analysis.realismRatio)}x más exigente de lo que ha logrado mantener.
+Su contribución promedio histórica es de $${analysis.averageContribution.toFixed(
+      2
+    )}/día, lo cual hace esta meta ${Math.round(
+      analysis.realismRatio
+    )}x más exigente de lo que ha logrado mantener.
 
 Sugiere:
 1. Extender la fecha límite (¿cuántos días más necesitaría manteniendo su ritmo actual?)
@@ -188,6 +214,29 @@ Responde SOLO con un JSON válido en este formato:
   "reasoning": "explicación breve y motivadora"
 }`;
 
+    // Use fallback logic if no API key is configured
+    if (!this.OPENAI_API_KEY || this.OPENAI_API_KEY === "") {
+      console.log("OpenAI API key not configured, using fallback logic");
+      const daysNeeded = Math.ceil(
+        analysis.amountRemaining / analysis.averageContribution
+      );
+      const additionalDays = daysNeeded - analysis.daysRemaining;
+
+      return {
+        suggestion: additionalDays > 0 ? "extend" : "reduce",
+        newValue:
+          additionalDays > 0
+            ? additionalDays
+            : Math.ceil(
+                analysis.goal.currentAmount / analysis.averageContribution
+              ),
+        reasoning:
+          additionalDays > 0
+            ? `Basado en tu ritmo actual de ahorro, necesitarías ${daysNeeded} días más para alcanzar tu meta. Considera extender la fecha límite para que sea más alcanzable.`
+            : `Con tu ritmo actual, estás en excelente camino. Podrías considerar reducir el monto objetivo para cumplirlo antes de la fecha límite.`,
+      };
+    }
+
     try {
       const response = await fetch(
         "https://api.openai.com/v1/chat/completions",
@@ -198,7 +247,7 @@ Responde SOLO con un JSON válido en este formato:
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: "gpt-4",
+            model: "gpt-4.1-nano",
             messages: [
               {
                 role: "system",
@@ -218,6 +267,8 @@ Responde SOLO con un JSON válido en este formato:
       );
 
       if (!response.ok) {
+        const errorBody = await response.text();
+        console.error(`OpenAI API error: ${response.status} - ${errorBody}`);
         throw new Error(`OpenAI API error: ${response.status}`);
       }
 
@@ -230,7 +281,7 @@ Responde SOLO con un JSON válido en este formato:
 
       return JSON.parse(content);
     } catch (error) {
-      console.error("Error calling OpenAI API:", error);
+      console.error("Error calling OpenAI API, using fallback:", error);
 
       const daysNeeded = Math.ceil(
         analysis.amountRemaining / analysis.averageContribution
@@ -242,9 +293,7 @@ Responde SOLO con un JSON válido en este formato:
         newValue:
           additionalDays > 0
             ? additionalDays
-            : Math.floor(
-                analysis.averageContribution * analysis.daysRemaining
-              ),
+            : Math.floor(analysis.averageContribution * analysis.daysRemaining),
         reasoning:
           "Tu ritmo de ahorro actual sugiere que necesitas ajustar tu meta para hacerla más alcanzable. Esto te ayudará a mantener la motivación y el progreso constante.",
       };
@@ -265,7 +314,9 @@ Responde SOLO con un JSON válido en este formato:
     );
 
     const extendedDate = new Date(analysis.goal.endDate);
-    extendedDate.setDate(extendedDate.getDate() + (daysNeeded - analysis.daysRemaining));
+    extendedDate.setDate(
+      extendedDate.getDate() + (daysNeeded - analysis.daysRemaining)
+    );
 
     return {
       targetAmount: realisticAmount,

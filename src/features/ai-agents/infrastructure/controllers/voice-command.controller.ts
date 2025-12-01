@@ -6,15 +6,16 @@ import { GoalAgentService } from "../../application/services/goal-agent.service"
 import { BudgetAgentService } from "../../application/services/budget-agent.service";
 import { ValidationAgentService } from "../../application/services/validation-agent.service";
 import { OpenAITranscriptionAdapter } from "../adapters/openai-transcription.adapter";
-import { OpenAILLMAdapter } from "../adapters/openai-llm.adapter";
+import { OpenRouterLLMAdapter } from "../adapters/openrouter-llm.adapter";
 import { verifyToken } from "@/shared/utils/jwt.util";
 
 const app = new Hono();
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || '';
 
 const transcriptionService = new OpenAITranscriptionAdapter(OPENAI_API_KEY);
-const llmService = new OpenAILLMAdapter(OPENAI_API_KEY);
+const llmService = new OpenRouterLLMAdapter(OPENROUTER_API_KEY);
 const transactionAgent = new TransactionAgentService();
 const goalAgent = new GoalAgentService();
 const budgetAgent = new BudgetAgentService();
@@ -52,52 +53,52 @@ app.post("/voice-command", async (c) => {
       }, 401);
     }
 
-  return c.json({
-    "success": true,
-    "intent": "CREATE_GOAL",
-    "extractedData": {
-        "user_id": 1,
-        "name": "meta de ahorro para comida",
-        "target_amount": 600,
-        "current_amount": 0,
-        "end_date": "2026-10-09T21:58:33.460Z",
-        "category_id": null,
-        "contribution_frequency": null,
-        "contribution_amount": null
-    },
-    "confidence": 0.95,
-    "message": "He identificado una meta de ahorro: \"meta de ahorro para comida\" con objetivo de $600"
-});
+//   return c.json({
+//     "success": true,
+//     "intent": "CREATE_GOAL",
+//     "extractedData": {
+//         "user_id": 1,
+//         "name": "meta de ahorro para comida",
+//         "target_amount": 600,
+//         "current_amount": 0,
+//         "end_date": "2026-10-09T21:58:33.460Z",
+//         "category_id": null,
+//         "contribution_frequency": null,
+//         "contribution_amount": null
+//     },
+//     "confidence": 0.95,
+//     "message": "He identificado una meta de ahorro: \"meta de ahorro para comida\" con objetivo de $600"
+// });
 
-    // const user = payload as { id: number; email: string };
-    // const body = await c.req?.formData();
-    // const audioFile = body?.get("audio") as File;
+    const user = payload as { id: number; email: string };
+    const body = await c.req?.formData();
+    const audioFile = body?.get("audio") as File;
 
-    // if (!audioFile) {
-    //   return c.json({
-    //     success: false,
-    //     message: "No se recibió archivo de audio"
-    //   }, 400);
-    // }
+    if (!audioFile) {
+      return c.json({
+        success: false,
+        message: "No se recibió archivo de audio"
+      }, 400);
+    }
 
-    // const audioBlob = new Blob([await audioFile.arrayBuffer()], { 
-    //   type: audioFile.type || 'audio/wav' 
-    // });
+    const audioBlob = new Blob([await audioFile.arrayBuffer()], { 
+      type: audioFile.type || 'audio/wav' 
+    });
 
-    // const result = await processVoiceCommandUseCase.execute({
-    //   audioBlob,
-    //   userId: user.id
-    // });
+    const result = await processVoiceCommandUseCase.execute({
+      audioBlob,
+      userId: user.id
+    });
 
-    // return c.json({
-    //   success: result.success,
-    //   intent: result.intent,
-    //   extractedData: result.extractedData,
-    //   confidence: result.confidence,
-    //   message: result.message,
-    //   validationErrors: result.validationErrors,
-    //   suggestedCorrections: result.suggestedCorrections
-    // });
+    return c.json({
+      success: result.success,
+      intent: result.intent,
+      extractedData: result.extractedData,
+      confidence: result.confidence,
+      message: result.message,
+      validationErrors: result.validationErrors,
+      suggestedCorrections: result.suggestedCorrections
+    });
 
   } catch (error) {
     console.error("Error processing voice command:", error);

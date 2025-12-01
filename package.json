@@ -16,6 +16,7 @@
 		"@getbrevo/brevo": "^2.2.0",
 		"@hono/zod-openapi": "^0.18.3",
 		"@langchain/core": "^0.3.77",
+		"@openrouter/sdk": "^0.1.27",
 		"@scalar/hono-api-reference": "^0.5.162",
 		"@types/json2csv": "^5.0.7",
 		"@types/uuid": "^10.0.0",

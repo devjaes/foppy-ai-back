@@ -89,11 +89,7 @@ export class SpendingAnalysisService implements IAnalysisService {
   ): Promise<CategorySpending | null> {
     const now = new Date();
     const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const threeMonthsAgo = new Date(
-      now.getFullYear(),
-      now.getMonth() - 3,
-      1
-    );
+    const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 3, 1);
     const previousMonthStart = new Date(
       now.getFullYear(),
       now.getMonth() - 1,
@@ -115,6 +111,10 @@ export class SpendingAnalysisService implements IAnalysisService {
         startDate: threeMonthsAgo.toISOString(),
         endDate: previousMonthStart.toISOString(),
       });
+
+    console.log(
+      `[SpendingAnalysis] User ${userId}: Found ${currentMonthExpenses.length} expenses this month, ${previousThreeMonthsExpenses.length} in previous 3 months`
+    );
 
     const currentMonthByCategory = this.groupByCategory(currentMonthExpenses);
     const previousMonthsByCategory = this.groupByCategory(
@@ -147,6 +147,9 @@ export class SpendingAnalysisService implements IAnalysisService {
     }
 
     if (categoryAnalysis.length === 0) {
+      console.log(
+        `[SpendingAnalysis] User ${userId}: No unusual spending patterns detected (no category with >${this.THRESHOLD_PERCENTAGE}% increase)`
+      );
       return null;
     }
 
@@ -154,14 +157,18 @@ export class SpendingAnalysisService implements IAnalysisService {
       (a, b) => b.percentageIncrease - a.percentageIncrease
     );
 
+    console.log(
+      `[SpendingAnalysis] User ${userId}: Found unusual spending in ${categoryAnalysis[0].categoryName} (+${categoryAnalysis[0].percentageIncrease}%)`
+    );
+
     return categoryAnalysis[0];
   }
 
-  private groupByCategory(
-    transactions: any[]
-  ): Record<string, number> {
+  private groupByCategory(transactions: any[]): Record<string, number> {
     return transactions.reduce((acc, tx) => {
-      const key = `${tx.categoryId || "null"}|${tx.category?.name || "Sin categoría"}`;
+      const key = `${tx.categoryId || "null"}|${
+        tx.category?.name || "Sin categoría"
+      }`;
       acc[key] = (acc[key] || 0) + tx.amount;
       return acc;
     }, {} as Record<string, number>);
@@ -170,7 +177,13 @@ export class SpendingAnalysisService implements IAnalysisService {
   private async getAIInsight(
     spending: CategorySpending
   ): Promise<{ insight: string; suggestion: string }> {
-    const prompt = `El usuario ha gastado $${spending.currentMonthTotal.toFixed(2)} en "${spending.categoryName}" este mes, lo cual es ${spending.percentageIncrease}% más que su promedio de 3 meses de $${spending.threeMonthAverage.toFixed(2)}.
+    const prompt = `El usuario ha gastado $${spending.currentMonthTotal.toFixed(
+      2
+    )} en "${spending.categoryName}" este mes, lo cual es ${
+      spending.percentageIncrease
+    }% más que su promedio de 3 meses de $${spending.threeMonthAverage.toFixed(
+      2
+    )}.
 
 Proporciona:
 1. Un análisis breve (2-3 oraciones) sobre este patrón de gasto
@@ -182,6 +195,16 @@ Responde SOLO con un JSON válido en este formato:
   "suggestion": "sugerencia accionable"
 }`;
 
+    // Use fallback logic if no API key is configured
+    if (!this.OPENAI_API_KEY || this.OPENAI_API_KEY === "") {
+      console.log("OpenAI API key not configured, using fallback logic");
+      return {
+        insight: `Has incrementado tu gasto en ${spending.categoryName} en un ${spending.percentageIncrease}% comparado con tu promedio mensual. Este cambio significativo merece atención.`,
+        suggestion:
+          "Revisa tus transacciones recientes en esta categoría para identificar gastos innecesarios y considera establecer un presupuesto mensual.",
+      };
+    }
+
     try {
       const response = await fetch(
         "https://api.openai.com/v1/chat/completions",
@@ -192,7 +215,7 @@ Responde SOLO con un JSON válido en este formato:
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: "gpt-4",
+            model: "gpt-4.1-nano",
             messages: [
               {
                 role: "system",
@@ -212,6 +235,8 @@ Responde SOLO con un JSON válido en este formato:
       );
 
       if (!response.ok) {
+        const errorBody = await response.text();
+        console.error(`OpenAI API error: ${response.status} - ${errorBody}`);
         throw new Error(`OpenAI API error: ${response.status}`);
       }
 
@@ -224,7 +249,7 @@ Responde SOLO con un JSON válido en este formato:
 
       return JSON.parse(content);
     } catch (error) {
-      console.error("Error calling OpenAI API:", error);
+      console.error("Error calling OpenAI API, using fallback:", error);
 
       return {
         insight: `Has incrementado tu gasto en ${spending.categoryName} en un ${spending.percentageIncrease}% comparado con tu promedio mensual. Este cambio significativo merece atención.`,

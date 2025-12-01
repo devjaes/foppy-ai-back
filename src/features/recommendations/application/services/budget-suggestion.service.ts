@@ -108,6 +108,10 @@ export class BudgetSuggestionService implements IAnalysisService {
         new Date(this.getCurrentMonthString())
       );
 
+    console.log(
+      `[BudgetSuggestion] User ${userId}: Found ${recentExpenses.length} expenses in last 3 months, ${currentMonthBudgets.length} budgets this month`
+    );
+
     const budgetedCategoryIds = new Set(
       currentMonthBudgets.map((b) => b.categoryId).filter((id) => id !== null)
     );
@@ -146,11 +150,18 @@ export class BudgetSuggestionService implements IAnalysisService {
     }
 
     if (categoriesNeedingBudget.length === 0) {
+      console.log(
+        `[BudgetSuggestion] User ${userId}: No categories needing budget (all categories either have budgets or spend <$${this.MIN_AVERAGE_SPENDING}/month)`
+      );
       return null;
     }
 
     categoriesNeedingBudget.sort(
       (a, b) => b.averageMonthlySpending - a.averageMonthlySpending
+    );
+
+    console.log(
+      `[BudgetSuggestion] User ${userId}: Category "${categoriesNeedingBudget[0].categoryName}" needs budget (avg: $${categoriesNeedingBudget[0].averageMonthlySpending}/month)`
     );
 
     return categoriesNeedingBudget[0];
@@ -159,6 +170,14 @@ export class BudgetSuggestionService implements IAnalysisService {
   private async getAISuggestion(
     category: CategoryWithoutBudget
   ): Promise<{ suggestedBudget: number; reasoning: string }> {
+    // Use fallback logic if no API key is configured
+    if (!this.OPENAI_API_KEY || this.OPENAI_API_KEY === "") {
+      console.log(
+        "OpenAI API key not configured, using fallback logic for budget suggestion"
+      );
+      return this.getFallbackSuggestion(category);
+    }
+
     const prompt = `El usuario gasta en promedio $${category.averageMonthlySpending.toFixed(
       2
     )}/mes en "${
@@ -188,7 +207,7 @@ Responde SOLO con un JSON válido en este formato:
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: "gpt-4",
+            model: "gpt-4.1-nano",
             messages: [
               {
                 role: "system",
@@ -208,6 +227,8 @@ Responde SOLO con un JSON válido en este formato:
       );
 
       if (!response.ok) {
+        const errorBody = await response.text();
+        console.error(`OpenAI API error: ${response.status} - ${errorBody}`);
         throw new Error(`OpenAI API error: ${response.status}`);
       }
 
@@ -220,21 +241,27 @@ Responde SOLO con un JSON válido en este formato:
 
       return JSON.parse(content);
     } catch (error) {
-      console.error("Error calling OpenAI API:", error);
-
-      const suggestedBudget = Math.ceil(category.averageMonthlySpending * 1.15);
-
-      return {
-        suggestedBudget,
-        reasoning: `Basado en tu gasto promedio de $${category.averageMonthlySpending.toFixed(
-          2
-        )}, te sugerimos un presupuesto de $${suggestedBudget.toFixed(
-          2
-        )} mensual que incluye un 15% de flexibilidad para imprevistos en ${
-          category.categoryName
-        }.`,
-      };
+      console.error("Error calling OpenAI API, using fallback:", error);
+      return this.getFallbackSuggestion(category);
     }
+  }
+
+  private getFallbackSuggestion(category: CategoryWithoutBudget): {
+    suggestedBudget: number;
+    reasoning: string;
+  } {
+    const suggestedBudget = Math.ceil(category.averageMonthlySpending * 1.15);
+
+    return {
+      suggestedBudget,
+      reasoning: `Basado en tu gasto promedio de $${category.averageMonthlySpending.toFixed(
+        2
+      )}, te sugerimos un presupuesto de $${suggestedBudget.toFixed(
+        2
+      )} mensual que incluye un 15% de flexibilidad para imprevistos en ${
+        category.categoryName
+      }.`,
+    };
   }
 
   private calculatePriority(averageSpending: number): RecommendationPriority {
