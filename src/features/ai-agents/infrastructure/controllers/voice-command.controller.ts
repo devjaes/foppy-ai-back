@@ -6,15 +6,16 @@ import { GoalAgentService } from "../../application/services/goal-agent.service"
 import { BudgetAgentService } from "../../application/services/budget-agent.service";
 import { ValidationAgentService } from "../../application/services/validation-agent.service";
 import { OpenAITranscriptionAdapter } from "../adapters/openai-transcription.adapter";
-import { OpenAILLMAdapter } from "../adapters/openai-llm.adapter";
+import { OpenRouterLLMAdapter } from "../adapters/openrouter-llm.adapter";
 import { verifyToken } from "@/shared/utils/jwt.util";
 
 const app = new Hono();
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || '';
 
 const transcriptionService = new OpenAITranscriptionAdapter(OPENAI_API_KEY);
-const llmService = new OpenAILLMAdapter(OPENAI_API_KEY);
+const llmService = new OpenRouterLLMAdapter(OPENROUTER_API_KEY);
 const transactionAgent = new TransactionAgentService();
 const goalAgent = new GoalAgentService();
 const budgetAgent = new BudgetAgentService();
