@@ -44,6 +44,8 @@ const EnvSchema = z
     BREVO_API_KEY: z.string().optional(),
     EMAIL_FROM_ADDRESS: z.string().email().optional(),
     EMAIL_FROM_NAME: z.string().optional(),
+    // Frontend URL for email links
+    FRONTEND_URL: z.string().url().default("http://localhost:3001"),
   })
   .superRefine((input, ctx) => {
     if (input.NODE_ENV === "production" && !input.DATABASE_AUTH_TOKEN) {

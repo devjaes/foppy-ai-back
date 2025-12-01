@@ -151,10 +151,7 @@ export const startGoalNotificationsJob = () => {
     }, delay);
   };
 
-  // Run once immediately at startup
-  checkGoalsForNotifications();
-
-  // Schedule recurring checks
+  // Schedule recurring checks (don't run immediately to avoid duplicate notifications on server restart)
   scheduleCheck();
 };
 

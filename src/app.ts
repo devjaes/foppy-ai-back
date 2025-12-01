@@ -50,7 +50,7 @@ startNotificationsCleanupJob();
 recalculateContributionAmountCron.start();
 
 startDebtNotificationsJob();
-startBudgetSummaryJob();
+startBudgetSummaryJob(); // Fixed: Now using proper CronJob instead of setTimeout
 startGoalNotificationsJob();
 startFinancialSuggestionsJob();
 startGoalSuggestionsJob();

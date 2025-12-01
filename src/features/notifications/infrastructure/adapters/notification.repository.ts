@@ -1,4 +1,4 @@
-import { eq, and, lt } from "drizzle-orm";
+import { eq, and, lt, desc } from "drizzle-orm";
 import DatabaseConnection from "@/core/infrastructure/database";
 import { notifications } from "@/schema";
 import {
@@ -21,7 +21,11 @@ export class PgNotificationRepository implements INotificationRepository {
   }
 
   async findAll(): Promise<INotification[]> {
-    const result = await this.db.select().from(notifications);
+    const result = await this.db
+      .select()
+      .from(notifications)
+      .orderBy(desc(notifications.created_at))
+      .limit(500); // Limit to last 500 notifications for admin purposes
     return result.map(this.mapToEntity);
   }
 
@@ -38,7 +42,9 @@ export class PgNotificationRepository implements INotificationRepository {
     const result = await this.db
       .select()
       .from(notifications)
-      .where(eq(notifications.user_id, userId));
+      .where(eq(notifications.user_id, userId))
+      .orderBy(desc(notifications.created_at))
+      .limit(100); // Limit to last 100 notifications
 
     return result.map(this.mapToEntity);
   }
@@ -49,7 +55,9 @@ export class PgNotificationRepository implements INotificationRepository {
       .from(notifications)
       .where(
         and(eq(notifications.user_id, userId), eq(notifications.read, false))
-      );
+      )
+      .orderBy(desc(notifications.created_at))
+      .limit(50); // Limit to last 50 unread notifications
 
     return result.map(this.mapToEntity);
   }
@@ -162,6 +170,31 @@ export class PgNotificationRepository implements INotificationRepository {
     const result = await this.db.select().from(notifications).where(conditions);
 
     return result.map(this.mapToEntity);
+  }
+
+  /**
+   * Find notifications by user, type and title pattern created after a specific date
+   * Used to prevent duplicate notifications
+   */
+  async findRecentByUserTypeAndTitle(
+    userId: number,
+    type: NotificationType,
+    titlePattern: string,
+    afterDate: Date
+  ): Promise<INotification[]> {
+    const result = await this.db
+      .select()
+      .from(notifications)
+      .where(
+        and(eq(notifications.user_id, userId), eq(notifications.type, type))
+      );
+
+    // Filter by date and title pattern in memory
+    return result
+      .map(this.mapToEntity)
+      .filter(
+        (n) => n.createdAt >= afterDate && n.title.includes(titlePattern)
+      );
   }
 
   private mapToEntity(raw: any): INotification {

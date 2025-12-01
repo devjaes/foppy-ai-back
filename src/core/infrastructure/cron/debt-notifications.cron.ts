@@ -95,9 +95,6 @@ export const startDebtNotificationsJob = () => {
     }, delay);
   };
 
-  // Run once immediately at startup
-  checkDebtsForNotifications();
-
-  // Schedule recurring checks
+  // Schedule recurring checks (don't run immediately to avoid duplicate notifications on server restart)
   scheduleCheck();
 };
