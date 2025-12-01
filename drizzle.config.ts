@@ -35,7 +35,7 @@ if (process.env.DATABASE_URL) {
 
 const isTestEnv = process.env.NODE_ENV === "test";
 const connectionString =
-  (isTestEnv && process.env.TEST_DATABASE_URL) || env.DATABASE_URL;
+  (isTestEnv && process.env.TEST_DATABASE_URL) || process.env.DATABASE_URL;
 
 if (isTestEnv && !process.env.TEST_DATABASE_URL) {
   console.warn(
