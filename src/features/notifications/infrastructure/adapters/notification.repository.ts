@@ -63,7 +63,10 @@ export class PgNotificationRepository implements INotificationRepository {
   }
 
   async create(
-    notificationData: Omit<INotification, "id" | "createdAt">
+    notificationData: Omit<
+      INotification,
+      "id" | "createdAt" | "updatedAt" | "read"
+    >
   ): Promise<INotification> {
     const result = await this.db
       .insert(notifications)
@@ -72,7 +75,7 @@ export class PgNotificationRepository implements INotificationRepository {
         title: notificationData.title,
         subtitle: notificationData.subtitle || null,
         message: notificationData.message,
-        read: notificationData.read,
+        read: false,
         type: notificationData.type,
         expires_at: notificationData.expiresAt || null,
       })
