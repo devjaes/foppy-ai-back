@@ -94,6 +94,7 @@ export class DebtReminderService implements IAnalysisService {
     );
 
     if (activeDebts.length === 0) {
+      console.log(`[DebtReminder] User ${userId}: No active debts found`);
       return null;
     }
 
@@ -106,12 +107,18 @@ export class DebtReminderService implements IAnalysisService {
     });
 
     if (upcomingDebts.length === 0) {
+      console.log(
+        `[DebtReminder] User ${userId}: No debts due within ${this.DAYS_AHEAD_THRESHOLD} days`
+      );
       return null;
     }
 
     const availableBalance = await this.calculateAvailableBalance(userId);
 
     if (availableBalance <= 0) {
+      console.log(
+        `[DebtReminder] User ${userId}: No available balance to pay debts`
+      );
       return null;
     }
 
@@ -126,10 +133,7 @@ export class DebtReminderService implements IAnalysisService {
 
       const suggestedPayment = canPayFull
         ? debt.pendingAmount
-        : Math.min(
-            Math.floor(availableBalance * 0.5),
-            debt.pendingAmount
-          );
+        : Math.min(Math.floor(availableBalance * 0.5), debt.pendingAmount);
 
       if (suggestedPayment > 0) {
         opportunities.push({
@@ -143,10 +147,17 @@ export class DebtReminderService implements IAnalysisService {
     }
 
     if (opportunities.length === 0) {
+      console.log(
+        `[DebtReminder] User ${userId}: No suitable payment opportunities found`
+      );
       return null;
     }
 
     opportunities.sort((a, b) => a.daysUntilDue - b.daysUntilDue);
+
+    console.log(
+      `[DebtReminder] User ${userId}: Found payment opportunity for "${opportunities[0].debt.description}" (due in ${opportunities[0].daysUntilDue} days)`
+    );
 
     return opportunities[0];
   }
@@ -166,7 +177,13 @@ export class DebtReminderService implements IAnalysisService {
   private async getAISuggestion(
     opportunity: DebtOpportunity
   ): Promise<{ suggestedPayment: number; reasoning: string }> {
-    const prompt = `El usuario tiene disponible $${opportunity.availableBalance.toFixed(2)} este mes. La deuda "${opportunity.debt.description}" de $${opportunity.debt.pendingAmount.toFixed(2)} vence en ${opportunity.daysUntilDue} días.
+    const prompt = `El usuario tiene disponible $${opportunity.availableBalance.toFixed(
+      2
+    )} este mes. La deuda "${
+      opportunity.debt.description
+    }" de $${opportunity.debt.pendingAmount.toFixed(2)} vence en ${
+      opportunity.daysUntilDue
+    } días.
 
 ${
   opportunity.canPayFull
@@ -178,7 +195,11 @@ Sugiere cuánto debería pagar ahora considerando:
 1. El monto disponible
 2. Los días restantes hasta el vencimiento
 3. Mantener un colchón de emergencia (no usar todo el balance disponible)
-4. ${opportunity.canPayFull ? "Beneficios de liquidar la deuda completa" : "Reducir el saldo pendiente para evitar intereses"}
+4. ${
+      opportunity.canPayFull
+        ? "Beneficios de liquidar la deuda completa"
+        : "Reducir el saldo pendiente para evitar intereses"
+    }
 
 Proporciona un razonamiento motivador (2-3 oraciones) sobre por qué es importante hacer este pago ahora.
 
@@ -187,6 +208,29 @@ Responde SOLO con un JSON válido en este formato:
   "suggestedPayment": número (monto sugerido para pagar),
   "reasoning": "explicación breve y motivadora"
 }`;
+
+    // Use fallback logic if no API key is configured
+    if (!this.OPENAI_API_KEY || this.OPENAI_API_KEY === "") {
+      console.log("OpenAI API key not configured, using fallback logic");
+      const suggestedPayment = opportunity.canPayFull
+        ? opportunity.debt.pendingAmount
+        : Math.floor(opportunity.availableBalance * 0.4);
+
+      return {
+        suggestedPayment,
+        reasoning: opportunity.canPayFull
+          ? `Tienes suficiente saldo para liquidar esta deuda de $${opportunity.debt.pendingAmount.toFixed(
+              2
+            )}. Pagarla ahora te liberará de esta obligación y evitará posibles cargos por intereses.`
+          : `Tienes disponible $${opportunity.availableBalance.toFixed(
+              2
+            )}. Considera hacer un pago de $${suggestedPayment.toFixed(
+              2
+            )} para reducir tu deuda de $${opportunity.debt.pendingAmount.toFixed(
+              2
+            )} que vence en ${opportunity.daysUntilDue} días.`,
+      };
+    }
 
     try {
       const response = await fetch(
@@ -198,7 +242,7 @@ Responde SOLO con un JSON válido en este formato:
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: "gpt-4",
+            model: "gpt-3.5-turbo",
             messages: [
               {
                 role: "system",
@@ -218,6 +262,8 @@ Responde SOLO con un JSON válido en este formato:
       );
 
       if (!response.ok) {
+        const errorBody = await response.text();
+        console.error(`OpenAI API error: ${response.status} - ${errorBody}`);
         throw new Error(`OpenAI API error: ${response.status}`);
       }
 
@@ -230,7 +276,7 @@ Responde SOLO con un JSON válido en este formato:
 
       return JSON.parse(content);
     } catch (error) {
-      console.error("Error calling OpenAI API:", error);
+      console.error("Error calling OpenAI API, using fallback:", error);
 
       const suggestedPayment = opportunity.canPayFull
         ? opportunity.debt.pendingAmount
@@ -239,8 +285,12 @@ Responde SOLO con un JSON válido en este formato:
       return {
         suggestedPayment,
         reasoning: opportunity.canPayFull
-          ? `Tienes suficiente saldo para liquidar esta deuda de $${opportunity.debt.pendingAmount.toFixed(2)}. Pagarla ahora te liberará de esta obligación y evitará posibles cargos por intereses.`
-          : `Con tu saldo actual, puedes hacer un pago de $${suggestedPayment.toFixed(2)} que reducirá significativamente tu deuda. Esto te acercará a liquidarla y minimizará los intereses acumulados.`,
+          ? `Tienes suficiente saldo para liquidar esta deuda de $${opportunity.debt.pendingAmount.toFixed(
+              2
+            )}. Pagarla ahora te liberará de esta obligación y evitará posibles cargos por intereses.`
+          : `Con tu saldo actual, puedes hacer un pago de $${suggestedPayment.toFixed(
+              2
+            )} que reducirá significativamente tu deuda. Esto te acercará a liquidarla y minimizará los intereses acumulados.`,
       };
     }
   }

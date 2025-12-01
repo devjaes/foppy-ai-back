@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { recommendations } from "@/schema";
-import { eq, and, gt, lt } from "drizzle-orm";
+import { eq, and, gt, lt, inArray } from "drizzle-orm";
 import { IRecommendationRepository } from "../../domain/ports/recommendation.repository.interface";
 import {
   Recommendation,
@@ -65,13 +65,18 @@ export class PgRecommendationRepository implements IRecommendationRepository {
   async findPendingByUserId(userId: number): Promise<Recommendation[]> {
     const now = new Date();
 
+    // Return recommendations that are PENDING or VIEWED (exclude DISMISSED and ACTED)
+    // This allows users to see recommendations they've already viewed until they dismiss or act on them
     const results = await db
       .select()
       .from(recommendations)
       .where(
         and(
           eq(recommendations.user_id, userId),
-          eq(recommendations.status, RecommendationStatus.PENDING),
+          inArray(recommendations.status, [
+            RecommendationStatus.PENDING,
+            RecommendationStatus.VIEWED,
+          ]),
           gt(recommendations.expires_at, now)
         )
       )

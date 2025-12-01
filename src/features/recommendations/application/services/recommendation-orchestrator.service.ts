@@ -93,6 +93,26 @@ export class RecommendationOrchestratorService
         return null;
       }
 
+      // Additional check: verify if there's already a recommendation with the same title/type in the last 23 hours
+      const recentThreshold = new Date();
+      recentThreshold.setHours(recentThreshold.getHours() - 23);
+
+      const pendingRecommendations =
+        await this.recommendationRepository.findPendingByUserId(userId);
+      const duplicateExists = pendingRecommendations.some(
+        (rec) =>
+          rec.type === randomType &&
+          rec.title === analysisResult.title &&
+          rec.createdAt >= recentThreshold
+      );
+
+      if (duplicateExists) {
+        console.log(
+          `Duplicate recommendation detected for user ${userId} with type ${randomType} and title "${analysisResult.title}". Skipping creation.`
+        );
+        return null;
+      }
+
       const recommendation = await this.recommendationRepository.create({
         userId,
         type: randomType,
@@ -144,15 +164,26 @@ export class RecommendationOrchestratorService
 
   private async checkRecentRecommendation(userId: number): Promise<boolean> {
     try {
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
+      // Check for recommendations in the last 23 hours (to prevent duplicates even if running frequently)
+      const recentThreshold = new Date();
+      recentThreshold.setHours(recentThreshold.getHours() - 23);
 
       const pendingRecommendations =
         await this.recommendationRepository.findPendingByUserId(userId);
 
       const hasRecentRecommendation = pendingRecommendations.some(
-        (rec) => rec.createdAt >= todayStart
+        (rec) => rec.createdAt >= recentThreshold
       );
+
+      if (hasRecentRecommendation) {
+        console.log(
+          `User ${userId} has ${
+            pendingRecommendations.filter(
+              (rec) => rec.createdAt >= recentThreshold
+            ).length
+          } recommendation(s) from the last 23 hours`
+        );
+      }
 
       return hasRecentRecommendation;
     } catch (error) {
@@ -174,6 +205,25 @@ export class RecommendationOrchestratorService
     recommendation: Recommendation
   ): Promise<void> {
     try {
+      // Check if there's already a similar notification in the last 23 hours to prevent duplicates
+      const recentThreshold = new Date();
+      recentThreshold.setHours(recentThreshold.getHours() - 23);
+
+      const existingNotifications =
+        await this.notificationRepository.findRecentByUserTypeAndTitle(
+          recommendation.userId,
+          NotificationType.SUGGESTION,
+          recommendation.title,
+          recentThreshold
+        );
+
+      if (existingNotifications.length > 0) {
+        console.log(
+          `Skipping notification creation for recommendation ${recommendation.id} - similar notification already exists`
+        );
+        return;
+      }
+
       await this.notificationRepository.create({
         userId: recommendation.userId,
         title: recommendation.title,
@@ -182,6 +232,10 @@ export class RecommendationOrchestratorService
         type: NotificationType.SUGGESTION,
         expiresAt: recommendation.expiresAt || undefined,
       });
+
+      console.log(
+        `Created notification for recommendation ${recommendation.id}`
+      );
     } catch (error) {
       console.error(
         `Error creating notification for recommendation ${recommendation.id}:`,

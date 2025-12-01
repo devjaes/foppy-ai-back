@@ -11,7 +11,8 @@ const orchestrator = RecommendationOrchestratorService.getInstance(
 );
 
 const dailyRecommendationsJob = new cron.CronJob(
-  "0 6 * * *",
+  // "0 6 * * *",
+  "*/5 * * * *", // TODO: Change back to "0 6 * * *" for production (runs every 5 minutes for testing)
   async () => {
     console.log("Running daily recommendations job...");
 
