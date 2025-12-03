@@ -5,6 +5,7 @@
 	"scripts": {
 		"dev": "bun run --hot src/index.ts",
 		"build": "bun build src/index.ts --outdir dist --target node --external bun",
+		"start": "bun run dist/index.js",
 		"migrate": "bun drizzle-kit migrate",
 		"generate": "bun drizzle-kit generate",
 		"db:seed": "bun run src/core/infrastructure/scripts/categories.seed.ts",
