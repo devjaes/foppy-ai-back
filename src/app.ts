@@ -60,7 +60,11 @@ configureOpenAPI(app);
 // Configuración CORS mejorada
 app.use(
   cors({
-    origin: ["http://localhost:3001", "http://localhost:3000", "*"],
+    origin: [
+      "http://localhost:3001",
+      "http://localhost:3000",
+      "https://foppy-ai-front.vercel.app",
+    ],
     allowHeaders: [
       "Origin",
       "X-Requested-With",
