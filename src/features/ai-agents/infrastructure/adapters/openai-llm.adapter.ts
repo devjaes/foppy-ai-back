@@ -2,7 +2,7 @@ import { ILLMService } from "../../domain/ports/transcription.port";
 
 export class OpenAILLMAdapter implements ILLMService {
   private apiKey: string;
-  private apiUrl = "https://api.openai.com/v1/completions";
+  private apiUrl = "https://api.openai.com/v1/chat/completions";
 
   constructor(apiKey: string) {
     this.apiKey = apiKey;
@@ -114,7 +114,8 @@ Responde SOLO con un JSON con estos campos:
   }
 
   private async callOpenAI(prompt: string): Promise<string> {
-    const fullPrompt = `Eres un asistente especializado en finanzas personales. Responde siempre con JSON válido.\n\n${prompt}`;
+    const systemPrompt =
+      "Eres un asistente especializado en finanzas personales. Responde siempre con JSON válido.";
 
     const response = await fetch(this.apiUrl, {
       method: "POST",
@@ -123,20 +124,31 @@ Responde SOLO con un JSON con estos campos:
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4.1-nano",
-        prompt: fullPrompt,
+        model: "gpt-4o-mini", // Modelo válido, rápido y económico de OpenAI
+        messages: [
+          {
+            role: "system",
+            content: systemPrompt,
+          },
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+        response_format: { type: "json_object" }, // Fuerza respuesta en JSON
         temperature: 0.3,
         max_tokens: 400,
       }),
     });
 
     if (!response.ok) {
+      const errorText = await response.text();
       throw new Error(
-        `OpenAI API error: ${response.status} ${response.statusText}`
+        `OpenAI API error: ${response.status} ${response.statusText} - ${errorText}`
       );
     }
 
     const result = await response.json();
-    return result.choices[0]?.text?.trim() || "{}";
+    return result.choices[0]?.message?.content?.trim() || "{}";
   }
 }

@@ -126,7 +126,7 @@ Responde SOLO con un JSON con estos campos:
         "X-Title": "Foppy Finance Assistant", // Optional: your app name
       },
       body: JSON.stringify({
-        model: "meta-llama/llama-3.2-3b-instruct:free", // Free Llama model
+        model: "google/gemini-flash-1.5", // Rápido y económico (~$0.00001 por request)
         messages: [
           {
             role: "system",

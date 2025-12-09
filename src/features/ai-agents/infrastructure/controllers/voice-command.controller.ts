@@ -6,16 +6,31 @@ import { GoalAgentService } from "../../application/services/goal-agent.service"
 import { BudgetAgentService } from "../../application/services/budget-agent.service";
 import { ValidationAgentService } from "../../application/services/validation-agent.service";
 import { OpenAITranscriptionAdapter } from "../adapters/openai-transcription.adapter";
-import { OpenRouterLLMAdapter } from "../adapters/openrouter-llm.adapter";
 import { verifyToken } from "@/shared/utils/jwt.util";
+import { LLMFactory, LLMProvider } from "../factories/llm.factory";
 
 const app = new Hono();
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || '';
+// Configuración desde variables de entorno
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || "";
+const LLM_PROVIDER = (process.env.LLM_PROVIDER || "openai") as LLMProvider;
 
+// Inicializar servicios
 const transcriptionService = new OpenAITranscriptionAdapter(OPENAI_API_KEY);
-const llmService = new OpenRouterLLMAdapter(OPENROUTER_API_KEY);
+
+// Usar el Factory con Strategy Pattern y fallback automático
+// Si falla el proveedor principal, automáticamente usa el secundario
+const llmService = LLMFactory.createWithFallback(
+  {
+    provider: LLM_PROVIDER,
+    apiKey: LLM_PROVIDER === "openai" ? OPENAI_API_KEY : OPENROUTER_API_KEY,
+  },
+  {
+    provider: LLM_PROVIDER === "openai" ? "openrouter" : "openai",
+    apiKey: LLM_PROVIDER === "openai" ? OPENROUTER_API_KEY : OPENAI_API_KEY,
+  }
+);
 const transactionAgent = new TransactionAgentService();
 const goalAgent = new GoalAgentService();
 const budgetAgent = new BudgetAgentService();
@@ -30,64 +45,75 @@ const voiceOrchestrator = new VoiceOrchestratorService(
   validationAgent
 );
 
-const processVoiceCommandUseCase = new ProcessVoiceCommandUseCase(voiceOrchestrator);
+const processVoiceCommandUseCase = new ProcessVoiceCommandUseCase(
+  voiceOrchestrator
+);
 
 app.post("/voice-command", async (c) => {
   try {
-    const authHeader = c.req.header('Authorization');
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return c.json({
-        success: false,
-        message: "Token de autorización requerido"
-      }, 401);
+    const authHeader = c.req.header("Authorization");
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return c.json(
+        {
+          success: false,
+          message: "Token de autorización requerido",
+        },
+        401
+      );
     }
 
     const token = authHeader.substring(7);
     const payload = await verifyToken(token);
 
     if (!payload) {
-      return c.json({
-        success: false,
-        message: "Token inválido"
-      }, 401);
+      return c.json(
+        {
+          success: false,
+          message: "Token inválido",
+        },
+        401
+      );
     }
 
-//   return c.json({
-//     "success": true,
-//     "intent": "CREATE_GOAL",
-//     "extractedData": {
-//         "user_id": 1,
-//         "name": "meta de ahorro para comida",
-//         "target_amount": 600,
-//         "current_amount": 0,
-//         "end_date": "2026-10-09T21:58:33.460Z",
-//         "category_id": null,
-//         "contribution_frequency": null,
-//         "contribution_amount": null
-//     },
-//     "confidence": 0.95,
-//     "message": "He identificado una meta de ahorro: \"meta de ahorro para comida\" con objetivo de $600"
-// });
+    //   return c.json({
+    //     "success": true,
+    //     "intent": "CREATE_GOAL",
+    //     "extractedData": {
+    //         "user_id": 1,
+    //         "name": "meta de ahorro para comida",
+    //         "target_amount": 600,
+    //         "current_amount": 0,
+    //         "end_date": "2026-10-09T21:58:33.460Z",
+    //         "category_id": null,
+    //         "contribution_frequency": null,
+    //         "contribution_amount": null
+    //     },
+    //     "confidence": 0.95,
+    //     "message": "He identificado una meta de ahorro: \"meta de ahorro para comida\" con objetivo de $600"
+    // });
 
     const user = payload as { id: number; email: string };
     const body = await c.req?.formData();
     const audioFile = body?.get("audio") as File;
 
     if (!audioFile) {
-      return c.json({
-        success: false,
-        message: "No se recibió archivo de audio"
-      }, 400);
+      return c.json(
+        {
+          success: false,
+          message: "No se recibió archivo de audio",
+        },
+        400
+      );
     }
 
-    const audioBlob = new Blob([await audioFile.arrayBuffer()], { 
-      type: audioFile.type || 'audio/wav' 
+    const audioBlob = new Blob([await audioFile.arrayBuffer()], {
+      type: audioFile.type || "audio/wav",
     });
 
     const result = await processVoiceCommandUseCase.execute({
       audioBlob,
-      userId: user.id
+      userId: user.id,
     });
 
     return c.json({
@@ -97,16 +123,18 @@ app.post("/voice-command", async (c) => {
       confidence: result.confidence,
       message: result.message,
       validationErrors: result.validationErrors,
-      suggestedCorrections: result.suggestedCorrections
+      suggestedCorrections: result.suggestedCorrections,
     });
-
   } catch (error) {
     console.error("Error processing voice command:", error);
-    return c.json({
-      success: false,
-      message: "Error interno del servidor"
-    }, 500);
+    return c.json(
+      {
+        success: false,
+        message: "Error interno del servidor",
+      },
+      500
+    );
   }
 });
 
-export default app; 
+export default app;
