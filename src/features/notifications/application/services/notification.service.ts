@@ -17,6 +17,7 @@ import {
   UpdateRoute,
 } from "../../infrastructure/controllers/notification.routes";
 import { PgUserRepository } from "@/users/infrastructure/adapters/user.repository";
+import { verifyToken } from "@/shared/utils/jwt.util";
 
 export class NotificationService implements INotificationService {
   private static instance: NotificationService;
@@ -46,7 +47,38 @@ export class NotificationService implements INotificationService {
   }
 
   getAll = createHandler<ListRoute>(async (c) => {
-    const notifications = await this.notificationRepository.findAll();
+    // Obtener y verificar el token de autorización
+    const authHeader = c.req.header("Authorization");
+    
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return c.json(
+        {
+          success: false,
+          data: null,
+          message: "Authorization token required",
+        },
+        HttpStatusCodes.UNAUTHORIZED
+      );
+    }
+
+    const token = authHeader.substring(7);
+    const payload = await verifyToken(token);
+
+    if (!payload) {
+      return c.json(
+        {
+          success: false,
+          data: null,
+          message: "Invalid token",
+        },
+        HttpStatusCodes.UNAUTHORIZED
+      );
+    }
+
+    const user = payload as { id: number; email: string };
+    
+    // Filtrar notificaciones por el usuario autenticado
+    const notifications = await this.notificationRepository.findByUserId(user.id);
     return c.json(
       {
         success: true,
@@ -58,6 +90,35 @@ export class NotificationService implements INotificationService {
   });
 
   getById = createHandler<GetByIdRoute>(async (c) => {
+    // Obtener y verificar el token de autorización
+    const authHeader = c.req.header("Authorization");
+    
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return c.json(
+        {
+          success: false,
+          data: null,
+          message: "Authorization token required",
+        },
+        HttpStatusCodes.UNAUTHORIZED
+      );
+    }
+
+    const token = authHeader.substring(7);
+    const payload = await verifyToken(token);
+
+    if (!payload) {
+      return c.json(
+        {
+          success: false,
+          data: null,
+          message: "Invalid token",
+        },
+        HttpStatusCodes.UNAUTHORIZED
+      );
+    }
+
+    const user = payload as { id: number; email: string };
     const id = c.req.param("id");
     const notification = await this.notificationRepository.findById(Number(id));
 
@@ -72,6 +133,18 @@ export class NotificationService implements INotificationService {
       );
     }
 
+    // Verificar que la notificación pertenece al usuario autenticado
+    if (notification.userId !== user.id) {
+      return c.json(
+        {
+          success: false,
+          data: null,
+          message: "Unauthorized to access this notification",
+        },
+        HttpStatusCodes.FORBIDDEN
+      );
+    }
+
     return c.json(
       {
         success: true,
@@ -83,7 +156,48 @@ export class NotificationService implements INotificationService {
   });
 
   getByUserId = createHandler<ListByUserRoute>(async (c) => {
+    // Obtener y verificar el token de autorización
+    const authHeader = c.req.header("Authorization");
+    
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return c.json(
+        {
+          success: false,
+          data: null,
+          message: "Authorization token required",
+        },
+        HttpStatusCodes.UNAUTHORIZED
+      );
+    }
+
+    const token = authHeader.substring(7);
+    const payload = await verifyToken(token);
+
+    if (!payload) {
+      return c.json(
+        {
+          success: false,
+          data: null,
+          message: "Invalid token",
+        },
+        HttpStatusCodes.UNAUTHORIZED
+      );
+    }
+
+    const authenticatedUser = payload as { id: number; email: string };
     const userId = c.req.param("userId");
+
+    // Verificar que el usuario autenticado solo pueda ver sus propias notificaciones
+    if (authenticatedUser.id !== Number(userId)) {
+      return c.json(
+        {
+          success: false,
+          data: null,
+          message: "Unauthorized to access another user's notifications",
+        },
+        HttpStatusCodes.FORBIDDEN
+      );
+    }
 
     const user = await this.userRepository.findById(Number(userId));
     if (!user) {
@@ -111,7 +225,48 @@ export class NotificationService implements INotificationService {
   });
 
   getUnreadByUserId = createHandler<ListUnreadByUserRoute>(async (c) => {
+    // Obtener y verificar el token de autorización
+    const authHeader = c.req.header("Authorization");
+    
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return c.json(
+        {
+          success: false,
+          data: null,
+          message: "Authorization token required",
+        },
+        HttpStatusCodes.UNAUTHORIZED
+      );
+    }
+
+    const token = authHeader.substring(7);
+    const payload = await verifyToken(token);
+
+    if (!payload) {
+      return c.json(
+        {
+          success: false,
+          data: null,
+          message: "Invalid token",
+        },
+        HttpStatusCodes.UNAUTHORIZED
+      );
+    }
+
+    const authenticatedUser = payload as { id: number; email: string };
     const userId = c.req.param("userId");
+
+    // Verificar que el usuario autenticado solo pueda ver sus propias notificaciones
+    if (authenticatedUser.id !== Number(userId)) {
+      return c.json(
+        {
+          success: false,
+          data: null,
+          message: "Unauthorized to access another user's notifications",
+        },
+        HttpStatusCodes.FORBIDDEN
+      );
+    }
 
     const user = await this.userRepository.findById(Number(userId));
     if (!user) {
@@ -186,6 +341,35 @@ export class NotificationService implements INotificationService {
   });
 
   update = createHandler<UpdateRoute>(async (c) => {
+    // Obtener y verificar el token de autorización
+    const authHeader = c.req.header("Authorization");
+    
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return c.json(
+        {
+          success: false,
+          data: null,
+          message: "Authorization token required",
+        },
+        HttpStatusCodes.UNAUTHORIZED
+      );
+    }
+
+    const token = authHeader.substring(7);
+    const payload = await verifyToken(token);
+
+    if (!payload) {
+      return c.json(
+        {
+          success: false,
+          data: null,
+          message: "Invalid token",
+        },
+        HttpStatusCodes.UNAUTHORIZED
+      );
+    }
+
+    const user = payload as { id: number; email: string };
     const id = c.req.param("id");
     const data = c.req.valid("json");
 
@@ -198,6 +382,18 @@ export class NotificationService implements INotificationService {
           message: "Notification not found",
         },
         HttpStatusCodes.NOT_FOUND
+      );
+    }
+
+    // Verificar que la notificación pertenece al usuario autenticado
+    if (notification.userId !== user.id) {
+      return c.json(
+        {
+          success: false,
+          data: null,
+          message: "Unauthorized to modify this notification",
+        },
+        HttpStatusCodes.FORBIDDEN
       );
     }
 
@@ -226,6 +422,35 @@ export class NotificationService implements INotificationService {
   });
 
   delete = createHandler<DeleteRoute>(async (c) => {
+    // Obtener y verificar el token de autorización
+    const authHeader = c.req.header("Authorization");
+    
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return c.json(
+        {
+          success: false,
+          data: null,
+          message: "Authorization token required",
+        },
+        HttpStatusCodes.UNAUTHORIZED
+      );
+    }
+
+    const token = authHeader.substring(7);
+    const payload = await verifyToken(token);
+
+    if (!payload) {
+      return c.json(
+        {
+          success: false,
+          data: null,
+          message: "Invalid token",
+        },
+        HttpStatusCodes.UNAUTHORIZED
+      );
+    }
+
+    const user = payload as { id: number; email: string };
     const id = c.req.param("id");
     const notification = await this.notificationRepository.findById(Number(id));
 
@@ -237,6 +462,18 @@ export class NotificationService implements INotificationService {
           message: "Notification not found",
         },
         HttpStatusCodes.NOT_FOUND
+      );
+    }
+
+    // Verificar que la notificación pertenece al usuario autenticado
+    if (notification.userId !== user.id) {
+      return c.json(
+        {
+          success: false,
+          data: null,
+          message: "Unauthorized to delete this notification",
+        },
+        HttpStatusCodes.FORBIDDEN
       );
     }
 
@@ -252,6 +489,35 @@ export class NotificationService implements INotificationService {
   });
 
   markAsRead = createHandler<MarkAsReadRoute>(async (c) => {
+    // Obtener y verificar el token de autorización
+    const authHeader = c.req.header("Authorization");
+    
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return c.json(
+        {
+          success: false,
+          data: null,
+          message: "Authorization token required",
+        },
+        HttpStatusCodes.UNAUTHORIZED
+      );
+    }
+
+    const token = authHeader.substring(7);
+    const payload = await verifyToken(token);
+
+    if (!payload) {
+      return c.json(
+        {
+          success: false,
+          data: null,
+          message: "Invalid token",
+        },
+        HttpStatusCodes.UNAUTHORIZED
+      );
+    }
+
+    const user = payload as { id: number; email: string };
     const id = c.req.param("id");
     const notification = await this.notificationRepository.findById(Number(id));
 
@@ -263,6 +529,18 @@ export class NotificationService implements INotificationService {
           message: "Notification not found",
         },
         HttpStatusCodes.NOT_FOUND
+      );
+    }
+
+    // Verificar que la notificación pertenece al usuario autenticado
+    if (notification.userId !== user.id) {
+      return c.json(
+        {
+          success: false,
+          data: null,
+          message: "Unauthorized to modify this notification",
+        },
+        HttpStatusCodes.FORBIDDEN
       );
     }
 
@@ -280,7 +558,48 @@ export class NotificationService implements INotificationService {
   });
 
   markAllAsRead = createHandler<MarkAllAsReadRoute>(async (c) => {
+    // Obtener y verificar el token de autorización
+    const authHeader = c.req.header("Authorization");
+    
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return c.json(
+        {
+          success: false,
+          data: null,
+          message: "Authorization token required",
+        },
+        HttpStatusCodes.UNAUTHORIZED
+      );
+    }
+
+    const token = authHeader.substring(7);
+    const payload = await verifyToken(token);
+
+    if (!payload) {
+      return c.json(
+        {
+          success: false,
+          data: null,
+          message: "Invalid token",
+        },
+        HttpStatusCodes.UNAUTHORIZED
+      );
+    }
+
+    const authenticatedUser = payload as { id: number; email: string };
     const userId = c.req.param("userId");
+
+    // Verificar que el usuario autenticado solo pueda marcar sus propias notificaciones
+    if (authenticatedUser.id !== Number(userId)) {
+      return c.json(
+        {
+          success: false,
+          data: null,
+          message: "Unauthorized to modify another user's notifications",
+        },
+        HttpStatusCodes.FORBIDDEN
+      );
+    }
 
     const user = await this.userRepository.findById(Number(userId));
     if (!user) {
