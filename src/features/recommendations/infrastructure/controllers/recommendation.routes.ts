@@ -185,7 +185,44 @@ export const markAsActed = createRoute({
   },
 });
 
+export const removeDuplicates = createRoute({
+  path: "/recommendations/remove-duplicates",
+  method: "delete",
+  tags,
+  responses: {
+    [HttpStatusCodes.OK]: {
+      content: {
+        "application/json": {
+          schema: baseResponseSchema(
+            z.object({
+              removed: z.number(),
+            })
+          ),
+        },
+      },
+      description: "Duplicate recommendations removed successfully",
+    },
+    [HttpStatusCodes.UNAUTHORIZED]: {
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
+      description: "User not authorized",
+    },
+    [HttpStatusCodes.INTERNAL_SERVER_ERROR]: {
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
+      description: "Unexpected error removing duplicates",
+    },
+  },
+});
+
 export type GetPendingRoute = typeof getPending;
 export type MarkAsViewedRoute = typeof markAsViewed;
 export type MarkAsDismissedRoute = typeof markAsDismissed;
 export type MarkAsActedRoute = typeof markAsActed;
+export type RemoveDuplicatesRoute = typeof removeDuplicates;

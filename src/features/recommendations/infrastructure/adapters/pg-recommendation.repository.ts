@@ -125,6 +125,38 @@ export class PgRecommendationRepository implements IRecommendationRepository {
     return result.rowCount || 0;
   }
 
+  async removeDuplicatesByUserId(userId: number): Promise<number> {
+    // Get all pending recommendations for the user
+    const userRecommendations = await this.findPendingByUserId(userId);
+
+    // Group by type and find duplicates
+    const seenTypes = new Map<string, number>();
+    const duplicateIds: number[] = [];
+
+    for (const rec of userRecommendations) {
+      const key = `${rec.type}-${rec.title}`;
+
+      if (seenTypes.has(key)) {
+        // This is a duplicate, mark for deletion
+        duplicateIds.push(rec.id);
+      } else {
+        // This is the first occurrence, keep it
+        seenTypes.set(key, rec.id);
+      }
+    }
+
+    // Delete all duplicates
+    if (duplicateIds.length > 0) {
+      const result = await db
+        .delete(recommendations)
+        .where(inArray(recommendations.id, duplicateIds));
+
+      return result.rowCount || 0;
+    }
+
+    return 0;
+  }
+
   private mapToEntity(dbRec: any): Recommendation {
     return {
       id: dbRec.id,

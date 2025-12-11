@@ -40,9 +40,19 @@ export class GoalSuggestionService {
     }
 
     const weeksRemaining = Math.max(1, Math.ceil(daysRemaining / 7));
-    const amountRemaining = goal.targetAmount - goal.currentAmount;
+    const amountRemaining = Math.max(0, goal.targetAmount - goal.currentAmount);
     const weeklySavingSuggestion = amountRemaining / weeksRemaining;
     const monthlySavingSuggestion = (amountRemaining / daysRemaining) * 30;
+
+    // Validar que los valores sean finitos antes de enviar notificación
+    if (
+      !isFinite(weeklySavingSuggestion) ||
+      !isFinite(monthlySavingSuggestion) ||
+      amountRemaining <= 0
+    ) {
+      // No generar notificación si los cálculos son inválidos
+      return;
+    }
 
     // Enviar notificación con la sugerencia
     await this.notificationUtils.createSuggestionNotification(
@@ -64,15 +74,17 @@ export class GoalSuggestionService {
    */
   async checkGoalAtRisk(goal: IGoal): Promise<void> {
     const now = new Date();
-    const goalCreationDate =
-      goal.createdAt || new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000); // Si no hay fecha de creación, asumimos 30 días atrás
+    const goalCreationDate = goal.createdAt || now; // Usar fecha actual si no hay fecha de creación
     const endDate = new Date(goal.endDate);
 
     // Calcular el ahorro semanal ideal original
-    const originalTotalDays = Math.ceil(
-      (endDate.getTime() - goalCreationDate.getTime()) / (1000 * 3600 * 24)
+    const originalTotalDays = Math.max(
+      1,
+      Math.ceil(
+        (endDate.getTime() - goalCreationDate.getTime()) / (1000 * 3600 * 24)
+      )
     );
-    const originalWeeks = Math.ceil(originalTotalDays / 7);
+    const originalWeeks = Math.max(1, Math.ceil(originalTotalDays / 7));
     const originalWeeklySaving = goal.targetAmount / originalWeeks;
 
     // Calcular el ahorro semanal necesario actual
@@ -81,8 +93,18 @@ export class GoalSuggestionService {
       Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 3600 * 24))
     );
     const remainingWeeks = Math.max(1, Math.ceil(remainingDays / 7));
-    const remainingAmount = goal.targetAmount - goal.currentAmount;
+    const remainingAmount = Math.max(0, goal.targetAmount - goal.currentAmount);
     const currentWeeklySaving = remainingAmount / remainingWeeks;
+
+    // Validar que los valores sean finitos antes de comparar
+    if (
+      !isFinite(originalWeeklySaving) ||
+      !isFinite(currentWeeklySaving) ||
+      originalWeeklySaving <= 0
+    ) {
+      // No generar notificación si los cálculos son inválidos
+      return;
+    }
 
     // Verificar si está en riesgo (necesita más del doble)
     if (currentWeeklySaving > originalWeeklySaving * 2) {
@@ -192,6 +214,12 @@ export class GoalSuggestionService {
 
     const averageDaysBetween = totalDaysBetween / (contributions.length - 1);
 
+    // Validar que averageDaysBetween sea válido
+    if (!isFinite(averageDaysBetween) || averageDaysBetween <= 0) {
+      // No generar sugerencia si los datos son inválidos
+      return;
+    }
+
     // Determinar frecuencia sugerida (semanal, quincenal, mensual)
     let suggestedFrequency: string;
     let suggestedAmount: number;
@@ -208,6 +236,11 @@ export class GoalSuggestionService {
       // Sugerir aporte mensual
       suggestedFrequency = "mensual";
       suggestedAmount = averageContribution * (30 / averageDaysBetween);
+    }
+
+    // Validar que el monto sugerido sea finito
+    if (!isFinite(suggestedAmount) || suggestedAmount <= 0) {
+      return;
     }
 
     await this.notificationUtils.createSuggestionNotification(

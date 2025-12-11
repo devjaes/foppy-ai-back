@@ -164,10 +164,51 @@ const markAsActedHandler = async (c: Context) => {
   }
 };
 
+const removeDuplicatesHandler = async (c: Context) => {
+  try {
+    const userId = c.req.query("userId")?.toString();
+
+    if (!userId) {
+      return c.json(
+        {
+          success: false,
+          data: null,
+          message: "User ID not found in context",
+        },
+        HttpStatusCodes.UNAUTHORIZED
+      );
+    }
+
+    const removed = await recommendationRepository.removeDuplicatesByUserId(
+      Number(userId)
+    );
+
+    return c.json(
+      {
+        success: true,
+        data: { removed },
+        message: `Removed ${removed} duplicate recommendation(s)`,
+      },
+      HttpStatusCodes.OK
+    );
+  } catch (error) {
+    console.error("Error removing duplicate recommendations:", error);
+    return c.json(
+      {
+        success: false,
+        data: null,
+        message: "Failed to remove duplicate recommendations",
+      },
+      HttpStatusCodes.INTERNAL_SERVER_ERROR
+    );
+  }
+};
+
 const router = createRouter()
   .openapi(routes.getPending, getPendingHandler)
   .openapi(routes.markAsViewed, markAsViewedHandler)
   .openapi(routes.markAsDismissed, markAsDismissedHandler)
-  .openapi(routes.markAsActed, markAsActedHandler);
+  .openapi(routes.markAsActed, markAsActedHandler)
+  .openapi(routes.removeDuplicates, removeDuplicatesHandler);
 
 export default router;

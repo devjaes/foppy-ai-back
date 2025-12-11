@@ -93,18 +93,36 @@ export class RecommendationOrchestratorService
         return null;
       }
 
-      // Additional check: verify if there's already a recommendation with the same title/type in the last 23 hours
+      // Additional check: verify if there's already a recommendation with the same title/type or same data
       const recentThreshold = new Date();
       recentThreshold.setHours(recentThreshold.getHours() - 23);
 
       const pendingRecommendations =
         await this.recommendationRepository.findPendingByUserId(userId);
-      const duplicateExists = pendingRecommendations.some(
-        (rec) =>
+      const duplicateExists = pendingRecommendations.some((rec) => {
+        // Check if same type and title within recent threshold
+        if (
           rec.type === randomType &&
           rec.title === analysisResult.title &&
           rec.createdAt >= recentThreshold
-      );
+        ) {
+          return true;
+        }
+
+        // Additional check for budget suggestions: verify if same category
+        if (
+          randomType === RecommendationType.BUDGET_SUGGESTION &&
+          rec.type === RecommendationType.BUDGET_SUGGESTION &&
+          rec.data?.categoryId === analysisResult.data?.categoryId
+        ) {
+          console.log(
+            `Found existing budget recommendation for category ${rec.data?.categoryId}`
+          );
+          return true;
+        }
+
+        return false;
+      });
 
       if (duplicateExists) {
         console.log(

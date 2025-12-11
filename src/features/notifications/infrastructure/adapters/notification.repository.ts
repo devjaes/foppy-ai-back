@@ -189,12 +189,10 @@ export class PgNotificationRepository implements INotificationRepository {
         and(eq(notifications.user_id, userId), eq(notifications.type, type))
       );
 
-    // Filter by date and title pattern in memory
+    // Filter by date and exact title match in memory
     return result
       .map(this.mapToEntity)
-      .filter(
-        (n) => n.createdAt >= afterDate && n.title.includes(titlePattern)
-      );
+      .filter((n) => n.createdAt >= afterDate && n.title === titlePattern);
   }
 
   private mapToEntity(raw: any): INotification {
