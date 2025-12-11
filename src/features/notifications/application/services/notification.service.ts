@@ -49,7 +49,7 @@ export class NotificationService implements INotificationService {
   getAll = createHandler<ListRoute>(async (c) => {
     // Obtener y verificar el token de autorización
     const authHeader = c.req.header("Authorization");
-    
+
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return c.json(
         {
@@ -76,9 +76,11 @@ export class NotificationService implements INotificationService {
     }
 
     const user = payload as { id: number; email: string };
-    
+
     // Filtrar notificaciones por el usuario autenticado
-    const notifications = await this.notificationRepository.findByUserId(user.id);
+    const notifications = await this.notificationRepository.findByUserId(
+      user.id
+    );
     return c.json(
       {
         success: true,
@@ -92,7 +94,7 @@ export class NotificationService implements INotificationService {
   getById = createHandler<GetByIdRoute>(async (c) => {
     // Obtener y verificar el token de autorización
     const authHeader = c.req.header("Authorization");
-    
+
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return c.json(
         {
@@ -158,7 +160,7 @@ export class NotificationService implements INotificationService {
   getByUserId = createHandler<ListByUserRoute>(async (c) => {
     // Obtener y verificar el token de autorización
     const authHeader = c.req.header("Authorization");
-    
+
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return c.json(
         {
@@ -227,7 +229,7 @@ export class NotificationService implements INotificationService {
   getUnreadByUserId = createHandler<ListUnreadByUserRoute>(async (c) => {
     // Obtener y verificar el token de autorización
     const authHeader = c.req.header("Authorization");
-    
+
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return c.json(
         {
@@ -343,7 +345,7 @@ export class NotificationService implements INotificationService {
   update = createHandler<UpdateRoute>(async (c) => {
     // Obtener y verificar el token de autorización
     const authHeader = c.req.header("Authorization");
-    
+
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return c.json(
         {
@@ -424,7 +426,7 @@ export class NotificationService implements INotificationService {
   delete = createHandler<DeleteRoute>(async (c) => {
     // Obtener y verificar el token de autorización
     const authHeader = c.req.header("Authorization");
-    
+
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return c.json(
         {
@@ -491,7 +493,7 @@ export class NotificationService implements INotificationService {
   markAsRead = createHandler<MarkAsReadRoute>(async (c) => {
     // Obtener y verificar el token de autorización
     const authHeader = c.req.header("Authorization");
-    
+
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return c.json(
         {
@@ -560,7 +562,7 @@ export class NotificationService implements INotificationService {
   markAllAsRead = createHandler<MarkAllAsReadRoute>(async (c) => {
     // Obtener y verificar el token de autorización
     const authHeader = c.req.header("Authorization");
-    
+
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return c.json(
         {
